@@ -39,7 +39,11 @@ class Postgres:
             return rows
 
 
-def load_films(pg_conn: psycopg.Connection, state: State, elastic: Elasticsearch):
+def load_films(
+        pg_conn: psycopg.Connection,
+        state: State,
+        elastic: Elasticsearch
+):
     pg = Postgres(
         conn=pg_conn,
         sql_path="storage/postgresql/queries/load_films.sql"
@@ -72,7 +76,6 @@ def main():
     }
 
     elastic = Elasticsearch(hosts=elastic_settings.host)
-    elastic.indices.delete(index=MOVIES_INDEX)
     try:
         elastic.indices.get(index=MOVIES_INDEX)
     except NotFoundError:
