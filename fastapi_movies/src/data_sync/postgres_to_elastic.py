@@ -6,6 +6,7 @@ import psycopg
 from elasticsearch import Elasticsearch, NotFoundError
 from psycopg import ClientCursor
 from psycopg.rows import dict_row
+from pydantic import BaseModel
 
 from data_sync.config.config import ElasticSettings, PostgresSettings
 from data_sync.utils.constants import (ETL_MAPPING, MOVIES_INDEX,
@@ -40,7 +41,7 @@ class Postgres:
 
 class PostgresExtractor:
     @staticmethod
-    def extract(film_work_data: dict) -> PostgresFilmWork:
+    def extract_films(film_work_data: dict) -> PostgresFilmWork:
         """Валидирует данные, пришедшие из Postgres."""
         film_work = PostgresFilmWork(
             id=film_work_data["id"],
@@ -60,7 +61,7 @@ class PostgresExtractor:
 
 class ElasticTransformer:
     @staticmethod
-    def transform(film_work_data: PostgresFilmWork) -> ElasticFilmWork:
+    def transform_films(film_work_data: PostgresFilmWork) -> ElasticFilmWork:
         """Приводит данные из объекта PostgresFilmWork в формат
         для загрузки в Elastic.
         """
@@ -91,20 +92,20 @@ class ElasticTransformer:
 
 class ElasticLoader:
     @staticmethod
-    def load(client: Elasticsearch, film_works: List[ElasticFilmWork]) -> None:
+    def load(client: Elasticsearch, index, objects: List[BaseModel]) -> None:
         """Осуществляет балковую загрузку данных в Эластик."""
         body = []
-        for film_work in film_works:
+        for _object in objects:
             body.append(
                 {
                     "index": {
-                        "_index": MOVIES_INDEX,
-                        "_id": film_work.id,
+                        "_index": index,
+                        "_id": _object.id,
                     }
                 }
             )
-            body.append({**film_work.model_dump()})
-        res = client.bulk(index=MOVIES_INDEX, body=body)
+            body.append({**_object.model_dump()})
+        res = client.bulk(index=index, body=body)
         logger.info(res)
 
 
@@ -141,11 +142,13 @@ def main():
         }):
             elastic_films = []
             for fm in film_works_data:
-                pg_film_work = PostgresExtractor.extract(fm)
-                elastic_film_work = ElasticTransformer.transform(pg_film_work)
+                pg_film_work = PostgresExtractor.extract_films(fm)
+                elastic_film_work = ElasticTransformer.transform_films(
+                    pg_film_work
+                )
                 elastic_films.append(elastic_film_work)
                 tmp_last_film_modified = pg_film_work.modified
-            ElasticLoader.load(elastic, elastic_films)
+            ElasticLoader.load(elastic, MOVIES_INDEX, elastic_films)
             last_modified_film = tmp_last_film_modified
             state.save_state(STATE_KEY, str(last_modified_film))
 
