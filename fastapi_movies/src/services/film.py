@@ -33,6 +33,18 @@ class FilmService:
 
         return film
 
+    async def get_all_films(self, sorting: str) -> list[Film] | None:
+        sort_params = {
+            "sort": [
+                {"imdb_rating": "desc" if sorting.startswith("-") else "asc"}
+            ],
+        }
+        films = await self.elastic.search(index=self._index, body=sort_params)
+
+        hits_films = films["hits"]["hits"]
+
+        return [Film(**film["_source"]) for film in hits_films]
+
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
             doc = await self.elastic.get(index=self._index, id=film_id)
