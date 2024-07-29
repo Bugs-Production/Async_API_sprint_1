@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from data_sync.dto.models import ElasticPerson
+from data_sync.dto.models import ElasticObject
 
 
 def get_time(timestring):
@@ -9,13 +9,15 @@ def get_time(timestring):
     return time
 
 
-def create_elastic_persons_list(persons_list) -> Optional[List[ElasticPerson]]:
+def create_elastic_objects_list(objects_list) -> Optional[List[ElasticObject]]:
 
     return (
         [
-            ElasticPerson(id=person.split(": ")[0], name=person.split(": ")[1])
-            for person in persons_list
+            ElasticObject(
+                id=_object.split(": ")[0], name=_object.split(": ")[1]
+            )
+            for _object in objects_list
         ]
-        if persons_list is not None
+        if objects_list is not None
         else []
     )

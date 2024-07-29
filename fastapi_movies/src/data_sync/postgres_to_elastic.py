@@ -11,7 +11,7 @@ from data_sync.config.config import ElasticSettings, PostgresSettings
 from data_sync.utils.constants import (ETL_MAPPING, MOVIES_INDEX,
                                        PG_FETCH_SIZE, STATE_KEY)
 from data_sync.utils.decorators import backoff
-from data_sync.utils.utils import create_elastic_persons_list
+from data_sync.utils.utils import create_elastic_objects_list
 from dto.models import ElasticFilmWork, PostgresFilmWork
 from state.json_storage import JsonStorage
 from state.state import State
@@ -64,16 +64,18 @@ class ElasticTransformer:
         """Приводит данные из объекта PostgresFilmWork в формат
         для загрузки в Elastic.
         """
-        el_actors = create_elastic_persons_list(film_work_data.actors)
+        el_actors = create_elastic_objects_list(film_work_data.actors)
 
-        el_directors = create_elastic_persons_list(film_work_data.directors)
+        el_directors = create_elastic_objects_list(film_work_data.directors)
 
-        el_writers = create_elastic_persons_list(film_work_data.writers)
+        el_writers = create_elastic_objects_list(film_work_data.writers)
+
+        genres = create_elastic_objects_list(film_work_data.genres)
 
         film_work = ElasticFilmWork(
             id=str(film_work_data.id),
             imdb_rating=film_work_data.rating,
-            genres=film_work_data.genres,
+            genres=[genre.model_dump() for genre in genres],
             title=film_work_data.title,
             description=film_work_data.description,
             actors_names=[person.name for person in el_actors],
@@ -101,7 +103,7 @@ class ElasticLoader:
                     }
                 }
             )
-            body.append({**film_work.dict()})
+            body.append({**film_work.model_dump()})
         res = client.bulk(index=MOVIES_INDEX, body=body)
         logger.info(res)
 

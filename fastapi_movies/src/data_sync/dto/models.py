@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ class PostgresFilmWork(BaseModel):
     writers: List[str] | None = None
 
 
-class ElasticPerson(BaseModel):
+class ElasticObject(BaseModel):
     id: UUID
     name: str
 
@@ -27,12 +27,12 @@ class ElasticPerson(BaseModel):
 class ElasticFilmWork(BaseModel):
     id: str
     imdb_rating: float | None = None
-    genres: List[str]
+    genres: List[Dict[str, Any]] | None = None
     title: str
     description: str | None = None
     directors_names: List[str] | None = None
     actors_names: List[str] | None = None
     writers_names: List[str] | None = None
-    directors: List[ElasticPerson] | None = None
-    actors: List[ElasticPerson] | None = None
-    writers: List[ElasticPerson] | None = None
+    directors: List[Dict[str, Any]] | None = None
+    actors: List[Dict[str, Any]] | None = None
+    writers: List[Dict[str, Any]] | None = None
