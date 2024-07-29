@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from data_sync.config.config import ElasticSettings, PostgresSettings
 from data_sync.utils.constants import (ETL_MAPPING, MOVIES_INDEX,
-                                       PG_FETCH_SIZE, STATE_KEY)
+                                       PG_FETCH_SIZE, FILM_WORK_STATE_KEY)
 from data_sync.utils.decorators import backoff
 from data_sync.utils.utils import create_elastic_objects_list
 from dto.models import ElasticFilmWork, PostgresFilmWork
@@ -109,6 +109,31 @@ class ElasticLoader:
         logger.info(res)
 
 
+def load_films(
+        pg_conn: psycopg.Connection,
+        state: State,
+        elastic: Elasticsearch
+):
+    pg = Postgres(
+        conn=pg_conn, sql_path="storage/postgresql/queries/load_films.sql"
+    )
+    last_modified_film = state.get_state(FILM_WORK_STATE_KEY, datetime.min)
+    while film_works_data := pg.execute(params={
+        "dttm": last_modified_film
+    }):
+        elastic_films = []
+        tmp_last_film_modified = last_modified_film
+        for fm in film_works_data:
+            pg_film_work = PostgresExtractor.extract_films(fm)
+            elastic_film_work = ElasticTransformer.transform_films(
+                pg_film_work
+            )
+            elastic_films.append(elastic_film_work)
+            tmp_last_film_modified = pg_film_work.modified
+        ElasticLoader.load(elastic, MOVIES_INDEX, elastic_films)
+        state.save_state(FILM_WORK_STATE_KEY, str(tmp_last_film_modified))
+
+
 @backoff()
 def main():
     postgres_settings = PostgresSettings()
@@ -133,24 +158,7 @@ def main():
     with psycopg.connect(
         **dsl, row_factory=dict_row, cursor_factory=ClientCursor
     ) as pg_conn:
-        pg = Postgres(
-            conn=pg_conn, sql_path="storage/postgresql/queries/load_films.sql"
-        )
-        last_modified_film = state.get_state(STATE_KEY, datetime.min)
-        while film_works_data := pg.execute(params={
-            "dttm": last_modified_film
-        }):
-            elastic_films = []
-            for fm in film_works_data:
-                pg_film_work = PostgresExtractor.extract_films(fm)
-                elastic_film_work = ElasticTransformer.transform_films(
-                    pg_film_work
-                )
-                elastic_films.append(elastic_film_work)
-                tmp_last_film_modified = pg_film_work.modified
-            ElasticLoader.load(elastic, MOVIES_INDEX, elastic_films)
-            last_modified_film = tmp_last_film_modified
-            state.save_state(STATE_KEY, str(last_modified_film))
+        load_films(pg_conn, state, elastic)
 
 
 if __name__ == "__main__":

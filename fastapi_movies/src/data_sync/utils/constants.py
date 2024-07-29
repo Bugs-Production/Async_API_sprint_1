@@ -1,4 +1,4 @@
-STATE_KEY = "film_work_last_updated"
+FILM_WORK_STATE_KEY = "film_work_last_updated"
 
 MOVIES_INDEX = "movies"
 
