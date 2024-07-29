@@ -14,6 +14,11 @@ class Person(IdMixIn):
     full_name: str = Field(alias='name')
 
 
+class FilmShort(IdMixIn):
+    title: str
+    imdb_rating: float
+
+
 class FilmDetails(IdMixIn):
     title: str
     imdb_rating: float
