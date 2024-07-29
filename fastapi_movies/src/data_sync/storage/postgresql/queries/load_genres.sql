@@ -1,6 +1,8 @@
 SELECT
    g.id,
    g.name,
+   g.description,
+   g.created,
    g.modified
 FROM content.genre g
 WHERE g.modified > %(dttm)s

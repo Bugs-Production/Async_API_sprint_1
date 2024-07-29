@@ -67,7 +67,11 @@ class GenresPostgresExtractor(PostgresExtractor):
     @staticmethod
     def extract(data: dict) -> PostgresGenre:
         genre = PostgresGenre(
-            id=data["id"], name=data["name"], modified=data["modified"]
+            id=data["id"],
+            name=data["name"],
+            description=data["description"],
+            created=data["created"],
+            modified=data["modified"]
         )
         return genre
 
@@ -116,8 +120,10 @@ class GenresElasticTransformer(ElasticTransformer):
         genre = ElasticGenre(
             id=str(data.id),
             name=data.name,
+            description=data.description,
+            created=data.created.isoformat(),
+            modified=data.modified.isoformat()
         )
-        logger.info(f"genre elastic: {genre.model_dump()}")
         return genre
 
 

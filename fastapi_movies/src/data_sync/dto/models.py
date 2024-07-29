@@ -41,9 +41,14 @@ class ElasticFilmWork(BaseModel):
 class PostgresGenre(BaseModel):
     id: UUID
     name: str
+    description: str | None = None
+    created: datetime
     modified: datetime
 
 
 class ElasticGenre(BaseModel):
     id: str
     name: str
+    description: str | None = None
+    created: str
+    modified: str
