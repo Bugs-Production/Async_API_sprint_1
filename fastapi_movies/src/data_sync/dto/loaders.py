@@ -129,7 +129,7 @@ class GenresElasticTransformer(ElasticTransformer):
 
 class ElasticLoader:
     @staticmethod
-    def load(client: Elasticsearch, index, objects: List[BaseModel]) -> None:
+    def load(client: Elasticsearch, index, objects: List[BaseModel]) -> Dict:
         """Осуществляет балковую загрузку данных в Эластик."""
         body = []
         for _object in objects:
@@ -144,6 +144,7 @@ class ElasticLoader:
             body.append({**_object.model_dump()})
         res = client.bulk(index=index, body=body)
         logger.info(res)
+        return res
 
 
 class Task:
@@ -180,8 +181,11 @@ class LoadManager:
                 elastic_obj = task.el_transformer.transform(pg_obj)
                 elastic_objects.append(elastic_obj)
                 tmp_last_obj_modified = pg_obj.modified
-            ElasticLoader.load(
+            res = ElasticLoader.load(
                 self.elastic, task.elastic_index, elastic_objects
             )
+            if res.get('errors', True):
+                logger.error('Elastic loader have a error!')
+                break
             last_modified_obj = tmp_last_obj_modified
             self.state.save_state(task.state_key, str(last_modified_obj))
