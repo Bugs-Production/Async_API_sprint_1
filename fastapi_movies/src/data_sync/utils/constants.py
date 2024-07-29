@@ -1,4 +1,5 @@
 FILM_WORK_STATE_KEY = "film_work_last_updated"
+GENRE_STATE_KEY = "genre_last_updated"
 
 MOVIES_INDEX = "movies"
 
@@ -6,7 +7,7 @@ PG_FETCH_SIZE = 100
 
 BACKOFF_ITERATIONS_COUNT = 15
 
-ETL_MAPPING = {
+ETL_FILMS_MAPPING = {
   "settings": {
     "refresh_interval": "1s",
     "analysis": {
