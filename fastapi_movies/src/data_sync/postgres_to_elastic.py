@@ -4,17 +4,23 @@ import psycopg
 from elasticsearch import Elasticsearch, NotFoundError
 from psycopg import ClientCursor
 from psycopg.rows import dict_row
+from pydantic import BaseModel
 
 from data_sync.config.config import ElasticSettings, PostgresSettings
 from data_sync.utils.constants import (
     ETL_FILMS_MAPPING,
+    ETL_GENRES_MAPPING,
     FILM_WORK_STATE_KEY,
+    GENRE_STATE_KEY,
+    GENRES_INDEX,
     MOVIES_INDEX,
 )
 from data_sync.utils.decorators import backoff
 from dto.loaders import (
     FilmsElasticTransformer,
     FilmsPostgresExtractor,
+    GenresElasticTransformer,
+    GenresPostgresExtractor,
     LoadManager,
     Postgres,
     Task,
@@ -24,6 +30,11 @@ from state.state import State
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class Index(BaseModel):
+    index: str
+    mapping: dict
 
 
 @backoff()
@@ -40,10 +51,15 @@ def main():
     }
 
     elastic = Elasticsearch(hosts=elastic_settings.host)
-    try:
-        elastic.indices.get(index=MOVIES_INDEX)
-    except NotFoundError:
-        elastic.indices.create(index=MOVIES_INDEX, body=ETL_FILMS_MAPPING)
+    indexes = [
+        Index(index=MOVIES_INDEX, mapping=ETL_FILMS_MAPPING),
+        Index(index=GENRES_INDEX, mapping=ETL_GENRES_MAPPING),
+    ]
+    for index in indexes:
+        try:
+            elastic.indices.get(index=index.index)
+        except NotFoundError:
+            elastic.indices.create(index=index.index, body=index.mapping)
 
     state = State(storage=JsonStorage())
 
@@ -59,7 +75,15 @@ def main():
             el_transformer=FilmsElasticTransformer,
             sql_path="storage/postgresql/queries/load_films.sql",
         )
+        genre_task = Task(
+            state_key=GENRE_STATE_KEY,
+            elastic_index=GENRES_INDEX,
+            extractor=GenresPostgresExtractor,
+            el_transformer=GenresElasticTransformer,
+            sql_path="storage/postgresql/queries/load_genres.sql",
+        )
         manager.load_to_elastic(film_work_task)
+        manager.load_to_elastic(genre_task)
 
 
 if __name__ == "__main__":

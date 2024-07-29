@@ -7,7 +7,12 @@ import psycopg
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 
-from data_sync.dto.models import ElasticFilmWork, PostgresFilmWork
+from data_sync.dto.models import (
+    ElasticFilmWork,
+    ElasticGenre,
+    PostgresFilmWork,
+    PostgresGenre,
+)
 from data_sync.state.state import State
 from data_sync.utils.constants import PG_FETCH_SIZE
 from data_sync.utils.decorators import backoff
@@ -58,6 +63,15 @@ class FilmsPostgresExtractor(PostgresExtractor):
         return film_work
 
 
+class GenresPostgresExtractor(PostgresExtractor):
+    @staticmethod
+    def extract(data: dict) -> PostgresGenre:
+        genre = PostgresGenre(
+            id=data["id"], name=data["name"], modified=data["modified"]
+        )
+        return genre
+
+
 class ElasticTransformer(ABC):
     @staticmethod
     @abstractmethod
@@ -94,6 +108,17 @@ class FilmsElasticTransformer(ElasticTransformer):
         )
 
         return film_work
+
+
+class GenresElasticTransformer(ElasticTransformer):
+    @staticmethod
+    def transform(data: PostgresGenre) -> ElasticGenre:
+        genre = ElasticGenre(
+            id=str(data.id),
+            name=data.name,
+        )
+        logger.info(f"genre elastic: {genre.model_dump()}")
+        return genre
 
 
 class ElasticLoader:

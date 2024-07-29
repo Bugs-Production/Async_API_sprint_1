@@ -36,3 +36,14 @@ class ElasticFilmWork(BaseModel):
     directors: List[Dict[str, Any]] | None = None
     actors: List[Dict[str, Any]] | None = None
     writers: List[Dict[str, Any]] | None = None
+
+
+class PostgresGenre(BaseModel):
+    id: UUID
+    name: str
+    modified: datetime
+
+
+class ElasticGenre(BaseModel):
+    id: str
+    name: str
