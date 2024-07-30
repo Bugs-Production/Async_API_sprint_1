@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page, add_pagination, paginate
 
 from .api_models import FilmDetails, FilmShort
@@ -11,16 +11,20 @@ router = APIRouter()
 
 @router.get("/", response_model=Page[FilmShort])
 async def films(
-    sort: str = Query(default="-imdb_rating"),
+    sort: str | None = "-imdb_rating",
+    genre: str | None = None,
     film_service: FilmService = Depends(get_film_service)
 ) -> list[FilmShort]:
     """
     Для сортировки используется default="-imdb_rating" по бизнес логике,
     чтобы всегда выводились только популярные фильмы
     """
-    sorted_films = await film_service.get_all_films(sorting=sort)
+    all_films = await film_service.get_all_films(sorting=sort, genre_filter=genre)
 
-    return paginate([FilmShort(**film.dict()) for film in sorted_films])
+    if not all_films:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="films not found")
+
+    return paginate([FilmShort(**film.dict()) for film in all_films])
 
 
 @router.get("/{film_id}", response_model=FilmDetails)

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -33,17 +33,45 @@ class FilmService:
 
         return film
 
-    async def get_all_films(self, sorting: str) -> list[Film] | None:
-        sort_params = {
-            "sort": [
-                {"imdb_rating": "desc" if sorting.startswith("-") else "asc"}
-            ],
-        }
-        films = await self.elastic.search(index=self._index, body=sort_params)
+    async def get_all_films(self, sorting: str, genre_filter: str | None) -> list[Film] | None:
+        sort_params = self._get_sort_params(sorting)
+        genre_params = self._get_filter_params(genre_filter)
+        params = {**sort_params, **genre_params}
+
+        films = await self.elastic.search(index=self._index, body=params)
 
         hits_films = films["hits"]["hits"]
 
         return [Film(**film["_source"]) for film in hits_films]
+
+    def _get_sort_params(self, sorting: str) -> dict[str, list[dict[str, str]]]:
+        """ Параметры для запроса в Elastic с сортировкой по рейтингу"""
+        return {
+            "sort": [
+                {"imdb_rating": "desc" if sorting.startswith("-") else "asc"}
+            ],
+        }
+
+    def _get_filter_params(self, genre_filter: str | None) -> dict[str, Any]:
+        """ Параметры для запроса в Elastic с фильтрацией по жанру"""
+        genre_params = {"query": {}}
+        if genre_filter:
+            genre_params["query"] = {
+                "nested": {
+                    "path": "genres",
+                    "query": {
+                        "bool": {
+                            "should": [
+                                {"match": {"genres.id": genre_filter}}
+                            ]
+                        }
+                    }
+                }
+            }
+        else:
+            genre_params["query"] = {"match_all": {}}
+
+        return genre_params
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
