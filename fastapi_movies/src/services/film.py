@@ -57,6 +57,7 @@ class FilmService:
 
     def _get_sort_params(self, sorting: str) -> dict[str, list[dict[str, str]]]:
         """ Параметры для запроса в Elastic с сортировкой по рейтингу"""
+
         return {
             "sort": [
                 {"imdb_rating": "desc" if sorting.startswith("-") else "asc"}
@@ -65,6 +66,7 @@ class FilmService:
 
     def _get_filter_params(self, genre_filter: str | None) -> dict[str, Any]:
         """ Параметры для запроса в Elastic с фильтрацией по жанру"""
+
         genre_params = {"query": {}}
         if genre_filter:
             genre_params["query"] = {
