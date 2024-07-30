@@ -1,7 +1,8 @@
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page, add_pagination, paginate
+from fastapi_pagination import add_pagination, paginate
+from fastapi_pagination.links import Page
 
 from .api_models import FilmDetails, FilmShort
 from services.film import FilmService, get_film_service
