@@ -16,12 +16,12 @@ class Person(IdMixIn):
 
 class FilmShort(IdMixIn):
     title: str
-    imdb_rating: float
+    imdb_rating: float | None
 
 
 class FilmDetails(IdMixIn):
     title: str
-    imdb_rating: float
+    imdb_rating: float | None
     description: str | None
     genre: list[Genre] = Field(alias="genres")
     actors: list[Person]
