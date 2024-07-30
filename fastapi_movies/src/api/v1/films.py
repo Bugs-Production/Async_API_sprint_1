@@ -9,6 +9,21 @@ from services.film import FilmService, get_film_service
 router = APIRouter()
 
 
+@router.get('/search', response_model=Page[FilmShort])
+async def film_search(
+    query: str,
+    sort: str = '-imdb_rating',
+    film_service: FilmService = Depends(get_film_service)
+) -> list[FilmShort]:
+
+    searched_films = await film_service.search_films(query=query, sorting=sort)
+
+    if not searched_films:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="films not found")
+
+    return paginate([FilmShort(**film.dict()) for film in searched_films])
+
+
 @router.get("/", response_model=Page[FilmShort])
 async def films(
     sort: str | None = "-imdb_rating",

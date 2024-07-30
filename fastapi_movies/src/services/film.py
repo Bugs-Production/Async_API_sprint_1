@@ -44,6 +44,17 @@ class FilmService:
 
         return [Film(**film["_source"]) for film in hits_films]
 
+    async def search_films(self, sorting: str, query: str) -> list[Film] | None:
+        sort_params = self._get_sort_params(sorting)
+        search_params = self._get_search_params(query)
+        params = {**sort_params, **search_params}
+
+        films = await self.elastic.search(index=self._index, body=params)
+
+        hits_films = films["hits"]["hits"]
+
+        return [Film(**film['_source']) for film in hits_films]
+
     def _get_sort_params(self, sorting: str) -> dict[str, list[dict[str, str]]]:
         """ Параметры для запроса в Elastic с сортировкой по рейтингу"""
         return {
@@ -72,6 +83,19 @@ class FilmService:
             genre_params["query"] = {"match_all": {}}
 
         return genre_params
+
+    def _get_search_params(self, query: str) -> dict[str, Any]:
+        """ Параметры для запроса в Elastic с простым поисковым запросом по названию фильма"""
+
+        return {
+            "query": {
+              "match": {
+                "title": {
+                    "query": query,
+                }
+              }
+            }
+          }
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
