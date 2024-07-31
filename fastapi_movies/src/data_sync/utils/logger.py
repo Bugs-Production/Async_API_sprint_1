@@ -1,1 +1,4 @@
-import logginglogging.basicConfig(level=logging.INFO)logger = logging.getLogger("data_sync")
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("data_sync")
