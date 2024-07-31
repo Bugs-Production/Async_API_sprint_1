@@ -5,7 +5,8 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from config.config import ElasticSettings, PostgresSettings
-from config.elastic_mapping import ETL_FILMS_MAPPING, ETL_GENRES_MAPPING
+from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
+                                    PERSONS_MAPPING)
 from dto.loaders import (FilmsElasticTransformer, FilmsPostgresExtractor,
                          GenresElasticTransformer, GenresPostgresExtractor,
                          LoadManager, PersonsElasticTransformer,
@@ -38,8 +39,9 @@ def main():
 
     elastic = Elasticsearch(hosts=elastic_settings.host)
     indexes = [
-        Index(index=MOVIES_INDEX, mapping=ETL_FILMS_MAPPING),
-        Index(index=GENRES_INDEX, mapping=ETL_GENRES_MAPPING),
+        Index(index=MOVIES_INDEX, mapping=FILMS_MAPPING),
+        Index(index=GENRES_INDEX, mapping=GENRES_MAPPING),
+        Index(index=PERSONS_INDEX, mapping=PERSONS_MAPPING)
     ]
     for index in indexes:
         try:
@@ -77,6 +79,7 @@ def main():
         )
         manager.load_to_elastic(film_work_task)
         manager.load_to_elastic(genre_task)
+        manager.load_to_elastic(person_task)
 
 
 if __name__ == "__main__":
