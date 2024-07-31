@@ -5,14 +5,16 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from config.config import ElasticSettings, PostgresSettings
+from config.elastic_mapping import ETL_FILMS_MAPPING, ETL_GENRES_MAPPING
 from dto.loaders import (FilmsElasticTransformer, FilmsPostgresExtractor,
                          GenresElasticTransformer, GenresPostgresExtractor,
-                         LoadManager, Postgres, Task)
+                         LoadManager, PersonsElasticTransformer,
+                         PersonsPostgresExtractor, Postgres, Task)
 from state.json_storage import JsonStorage
 from state.state import State
-from utils.constants import (ETL_FILMS_MAPPING, ETL_GENRES_MAPPING,
-                             FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
-                             GENRES_INDEX, MOVIES_INDEX)
+from utils.constants import (FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
+                             GENRES_INDEX, MOVIES_INDEX, PERSON_STATE_KEY,
+                             PERSONS_INDEX)
 from utils.decorators import backoff
 
 
@@ -65,6 +67,13 @@ def main():
             extractor=GenresPostgresExtractor,
             el_transformer=GenresElasticTransformer,
             sql_path="storage/postgresql/queries/load_genres.sql",
+        )
+        person_task = Task(
+            state_key=PERSON_STATE_KEY,
+            elastic_index=PERSONS_INDEX,
+            extractor=PersonsPostgresExtractor,
+            el_transformer=PersonsElasticTransformer,
+            sql_path="storage/postgresql/queries/load_persons.sql"
         )
         manager.load_to_elastic(film_work_task)
         manager.load_to_elastic(genre_task)
