@@ -6,8 +6,8 @@ from psycopg import ClientCursor
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
-from data_sync.config.config import ElasticSettings, PostgresSettings
-from data_sync.utils.constants import (
+from config.config import ElasticSettings, PostgresSettings
+from utils.constants import (
     ETL_FILMS_MAPPING,
     ETL_GENRES_MAPPING,
     FILM_WORK_STATE_KEY,
@@ -15,7 +15,7 @@ from data_sync.utils.constants import (
     GENRES_INDEX,
     MOVIES_INDEX,
 )
-from data_sync.utils.decorators import backoff
+from utils.decorators import backoff
 from dto.loaders import (
     FilmsElasticTransformer,
     FilmsPostgresExtractor,

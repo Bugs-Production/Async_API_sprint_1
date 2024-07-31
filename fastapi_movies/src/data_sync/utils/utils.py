@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from data_sync.dto.models import ElasticObject
+from dto.models import ElasticObject
 
 
 def get_time(timestring):
