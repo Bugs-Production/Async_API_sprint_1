@@ -52,3 +52,16 @@ class ElasticGenre(BaseModel):
     description: str | None = None
     created: str
     modified: str
+
+
+class PostgresPersonFilmwork(BaseModel):
+    id: UUID
+    roles: List
+    title: str
+    rating: float | None = None
+
+
+class PostgresPerson(BaseModel):
+    id: UUID
+    full_name: str
+    films: List[PostgresPersonFilmwork] | None = None

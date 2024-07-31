@@ -1,4 +1,3 @@
-import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List
@@ -7,19 +6,13 @@ import psycopg
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 
-from data_sync.dto.models import (
-    ElasticFilmWork,
-    ElasticGenre,
-    PostgresFilmWork,
-    PostgresGenre,
-)
-from data_sync.state.state import State
-from data_sync.utils.constants import PG_FETCH_SIZE
-from data_sync.utils.decorators import backoff
-from data_sync.utils.utils import create_elastic_objects_list
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from dto.models import (ElasticFilmWork, ElasticGenre, PostgresFilmWork,
+                        PostgresGenre)
+from state.state import State
+from utils.constants import PG_FETCH_SIZE
+from utils.decorators import backoff
+from utils.logger import logger
+from utils.utils import create_elastic_objects_list
 
 
 class Postgres:

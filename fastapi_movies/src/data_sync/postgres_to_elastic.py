@@ -1,35 +1,19 @@
-import logging
-
 import psycopg
 from elasticsearch import Elasticsearch, NotFoundError
 from psycopg import ClientCursor
 from psycopg.rows import dict_row
 from pydantic import BaseModel
 
-from data_sync.config.config import ElasticSettings, PostgresSettings
-from data_sync.utils.constants import (
-    ETL_FILMS_MAPPING,
-    ETL_GENRES_MAPPING,
-    FILM_WORK_STATE_KEY,
-    GENRE_STATE_KEY,
-    GENRES_INDEX,
-    MOVIES_INDEX,
-)
-from data_sync.utils.decorators import backoff
-from dto.loaders import (
-    FilmsElasticTransformer,
-    FilmsPostgresExtractor,
-    GenresElasticTransformer,
-    GenresPostgresExtractor,
-    LoadManager,
-    Postgres,
-    Task,
-)
+from config.config import ElasticSettings, PostgresSettings
+from dto.loaders import (FilmsElasticTransformer, FilmsPostgresExtractor,
+                         GenresElasticTransformer, GenresPostgresExtractor,
+                         LoadManager, Postgres, Task)
 from state.json_storage import JsonStorage
 from state.state import State
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from utils.constants import (ETL_FILMS_MAPPING, ETL_GENRES_MAPPING,
+                             FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
+                             GENRES_INDEX, MOVIES_INDEX)
+from utils.decorators import backoff
 
 
 class Index(BaseModel):

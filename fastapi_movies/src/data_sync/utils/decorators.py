@@ -4,7 +4,7 @@ from time import sleep
 import elastic_transport
 import psycopg
 
-from data_sync.utils.constants import BACKOFF_ITERATIONS_COUNT
+from utils.constants import BACKOFF_ITERATIONS_COUNT
 
 logger = logging.getLogger(__name__)
 
