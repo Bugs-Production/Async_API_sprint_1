@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Optional
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.film import Film
+from .utils import get_offset_params, get_genre_filter_params, get_sort_params, get_search_params
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
@@ -33,10 +34,17 @@ class FilmService:
 
         return film
 
-    async def get_all_films(self, sorting: str, genre_filter: str | None) -> list[Film] | None:
-        sort_params = self._get_sort_params(sorting)
-        genre_params = self._get_filter_params(genre_filter)
-        params = {**sort_params, **genre_params}
+    async def get_all_films(
+        self,
+        sorting: str,
+        genre_filter: str | None,
+        page_num: int,
+        page_size: int,
+    ) -> list[Film] | None:
+        sort_params = get_sort_params(sorting)
+        genre_params = get_genre_filter_params(genre_filter)
+        offset_params = get_offset_params(page_num, page_size)
+        params = {**sort_params, **genre_params, **offset_params}
 
         films = await self.elastic.search(index=self._index, body=params)
 
@@ -44,60 +52,23 @@ class FilmService:
 
         return [Film(**film["_source"]) for film in hits_films]
 
-    async def search_films(self, sorting: str, query: str) -> list[Film] | None:
-        sort_params = self._get_sort_params(sorting)
-        search_params = self._get_search_params(query)
-        params = {**sort_params, **search_params}
+    async def search_films(
+        self,
+        sorting: str,
+        query: str,
+        page_num: int,
+        page_size: int,
+    ) -> list[Film] | None:
+        sort_params = get_sort_params(sorting)
+        search_params = get_search_params(query)
+        offset_params = get_offset_params(page_num, page_size)
+        params = {**sort_params, **search_params, **offset_params}
 
         films = await self.elastic.search(index=self._index, body=params)
 
         hits_films = films["hits"]["hits"]
 
         return [Film(**film['_source']) for film in hits_films]
-
-    def _get_sort_params(self, sorting: str) -> dict[str, list[dict[str, str]]]:
-        """ Параметры для запроса в Elastic с сортировкой по рейтингу"""
-
-        return {
-            "sort": [
-                {"imdb_rating": "desc" if sorting.startswith("-") else "asc"}
-            ],
-        }
-
-    def _get_filter_params(self, genre_filter: str | None) -> dict[str, Any]:
-        """ Параметры для запроса в Elastic с фильтрацией по жанру"""
-
-        genre_params = {"query": {}}
-        if genre_filter:
-            genre_params["query"] = {
-                "nested": {
-                    "path": "genres",
-                    "query": {
-                        "bool": {
-                            "should": [
-                                {"match": {"genres.id": genre_filter}}
-                            ]
-                        }
-                    }
-                }
-            }
-        else:
-            genre_params["query"] = {"match_all": {}}
-
-        return genre_params
-
-    def _get_search_params(self, query: str) -> dict[str, Any]:
-        """ Параметры для запроса в Elastic с простым поисковым запросом по названию фильма"""
-
-        return {
-            "query": {
-              "match": {
-                "title": {
-                    "query": query,
-                }
-              }
-            }
-          }
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
