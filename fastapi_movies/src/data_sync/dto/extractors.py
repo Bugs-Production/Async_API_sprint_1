@@ -47,7 +47,7 @@ class PersonsPostgresExtractor(PostgresExtractor):
     @staticmethod
     def extract(data: dict) -> PostgresPerson:
         person = PostgresPerson(
-            uuid=data["uuid"],
+            id=data["id"],
             full_name=data["full_name"],
             films=data["films"],
             modified=data["modified"],

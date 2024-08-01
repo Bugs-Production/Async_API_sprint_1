@@ -1,5 +1,5 @@
 SELECT
-   uuid,
+   id,
    full_name,
    modified,
    COALESCE (json_agg(DISTINCT jsonb_build_object(
@@ -10,7 +10,7 @@ SELECT
    )), '[]') as "films"
 FROM (
     SELECT
-        p.uuid,
+        p.id,
         p.full_name,
         p.modified,
         pf.film_work_id,
@@ -19,7 +19,7 @@ FROM (
         ARRAY_AGG(pf.role) as roles
     FROM (
         SELECT
-            p.id uuid,
+            p.id,
             p.full_name,
             p.created,
             p.modified
@@ -28,9 +28,9 @@ FROM (
         LIMIT 100
     ) p
     JOIN content.person_film_work pf
-    ON p.uuid=pf.person_id
+    ON p.id=pf.person_id
     JOIN content.film_work fw
     ON pf.film_work_id=fw.id
-    GROUP BY p.uuid, p.full_name, pf.film_work_id, fw.title, fw.rating, p.modified
+    GROUP BY p.id, p.full_name, pf.film_work_id, fw.title, fw.rating, p.modified
 )
-GROUP BY uuid, full_name, modified
+GROUP BY id, full_name, modified

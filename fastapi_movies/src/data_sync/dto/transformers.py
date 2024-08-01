@@ -66,7 +66,7 @@ class PersonsElasticTransformer(ElasticTransformer):
     @staticmethod
     def transform(data: PostgresPerson) -> ElasticPerson:
         person = ElasticPerson(
-            id=str(data.uuid),
+            id=str(data.id),
             full_name=data.full_name,
             films=data.films,
         )
