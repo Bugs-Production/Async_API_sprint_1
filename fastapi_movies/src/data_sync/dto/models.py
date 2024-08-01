@@ -55,13 +55,20 @@ class ElasticGenre(BaseModel):
 
 
 class PostgresPersonFilmwork(BaseModel):
-    id: UUID
+    uuid: UUID
     roles: List
     title: str
     rating: float | None = None
 
 
 class PostgresPerson(BaseModel):
-    id: UUID
+    uuid: UUID
     full_name: str
-    films: List[PostgresPersonFilmwork] | None = None
+    modified: datetime
+    films: List[dict] | None = None
+
+
+class ElasticPerson(BaseModel):
+    id: str
+    full_name: str
+    films: List[Dict[str, Any]] | None = None

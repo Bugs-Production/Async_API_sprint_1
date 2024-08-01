@@ -6,8 +6,8 @@ import psycopg
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 
-from dto.models import (ElasticFilmWork, ElasticGenre, PostgresFilmWork,
-                        PostgresGenre)
+from dto.models import (ElasticFilmWork, ElasticGenre, ElasticPerson,
+                        PostgresFilmWork, PostgresGenre, PostgresPerson)
 from state.state import State
 from utils.constants import PG_FETCH_SIZE
 from utils.decorators import backoff
@@ -26,6 +26,7 @@ class Postgres:
                 query = f.read()
             cursor.execute(query, params)
             rows = cursor.fetchmany(PG_FETCH_SIZE)
+            logger.info(rows)
             return rows
 
 
@@ -67,6 +68,18 @@ class GenresPostgresExtractor(PostgresExtractor):
             modified=data["modified"]
         )
         return genre
+
+
+class PersonsPostgresExtractor(PostgresExtractor):
+    @staticmethod
+    def extract(data: dict) -> PostgresPerson:
+        person = PostgresPerson(
+            uuid=data["uuid"],
+            full_name=data["full_name"],
+            films=data["films"],
+            modified=data["modified"]
+        )
+        return person
 
 
 class ElasticTransformer(ABC):
@@ -120,6 +133,17 @@ class GenresElasticTransformer(ElasticTransformer):
         return genre
 
 
+class PersonsElasticTransformer(ElasticTransformer):
+    @staticmethod
+    def transform(data: PostgresPerson) -> ElasticPerson:
+        person = ElasticPerson(
+            id=str(data.uuid),
+            full_name=data.full_name,
+            films=data.films,
+        )
+        return person
+
+
 class ElasticLoader:
     @staticmethod
     def load(client: Elasticsearch, index, objects: List[BaseModel]) -> Dict:
@@ -135,6 +159,7 @@ class ElasticLoader:
                 }
             )
             body.append({**_object.model_dump()})
+            logger.info(body)
         res = client.bulk(index=index, body=body)
         logger.info(res)
         return res
