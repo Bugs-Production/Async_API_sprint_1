@@ -7,10 +7,12 @@ from pydantic import BaseModel
 from config.config import ElasticSettings, PostgresSettings
 from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
                                     PERSONS_MAPPING)
-from dto.loaders import (FilmsElasticTransformer, FilmsPostgresExtractor,
-                         GenresElasticTransformer, GenresPostgresExtractor,
-                         LoadManager, PersonsElasticTransformer,
-                         PersonsPostgresExtractor, Postgres, Task)
+from dto.extractors import (FilmsPostgresExtractor, GenresPostgresExtractor,
+                            PersonsPostgresExtractor)
+from dto.loaders import LoadManager, Postgres, Task
+from dto.transformers import (FilmsElasticTransformer,
+                              GenresElasticTransformer,
+                              PersonsElasticTransformer)
 from state.json_storage import JsonStorage
 from state.state import State
 from utils.constants import (FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
@@ -41,7 +43,7 @@ def main():
     indexes = [
         Index(index=MOVIES_INDEX, mapping=FILMS_MAPPING),
         Index(index=GENRES_INDEX, mapping=GENRES_MAPPING),
-        Index(index=PERSONS_INDEX, mapping=PERSONS_MAPPING)
+        Index(index=PERSONS_INDEX, mapping=PERSONS_MAPPING),
     ]
     for index in indexes:
         try:
@@ -75,7 +77,7 @@ def main():
             elastic_index=PERSONS_INDEX,
             extractor=PersonsPostgresExtractor,
             el_transformer=PersonsElasticTransformer,
-            sql_path="storage/postgresql/queries/load_persons.sql"
+            sql_path="storage/postgresql/queries/load_persons.sql",
         )
         manager.load_to_elastic(film_work_task)
         manager.load_to_elastic(genre_task)
