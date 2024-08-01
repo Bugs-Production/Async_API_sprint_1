@@ -24,7 +24,6 @@ class Postgres:
                 query = f.read()
             cursor.execute(query, params)
             rows = cursor.fetchmany(PG_FETCH_SIZE)
-            logger.info(rows)
             return rows
 
 
