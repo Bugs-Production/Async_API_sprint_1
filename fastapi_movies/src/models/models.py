@@ -9,6 +9,18 @@ class IdMixIn(BaseModel):
 
 class Genre(IdMixIn):
     name: str
+    description: str | None = None
+
+
+class PersonFilm(IdMixIn):
+    roles: list[str]
+    title: str
+    rating: float | None
+
+
+class PersonDetail(IdMixIn):
+    full_name: str
+    films: list[PersonFilm] | None = None
 
 
 class Person(IdMixIn):
