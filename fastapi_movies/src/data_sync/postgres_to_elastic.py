@@ -5,14 +5,19 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from config.config import ElasticSettings, PostgresSettings
-from dto.loaders import (FilmsElasticTransformer, FilmsPostgresExtractor,
-                         GenresElasticTransformer, GenresPostgresExtractor,
-                         LoadManager, Postgres, Task)
+from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
+                                    PERSONS_MAPPING)
+from dto.extractors import (FilmsPostgresExtractor, GenresPostgresExtractor,
+                            PersonsPostgresExtractor)
+from dto.loaders import LoadManager, Postgres, Task
+from dto.transformers import (FilmsElasticTransformer,
+                              GenresElasticTransformer,
+                              PersonsElasticTransformer)
 from state.json_storage import JsonStorage
 from state.state import State
-from utils.constants import (ETL_FILMS_MAPPING, ETL_GENRES_MAPPING,
-                             FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
-                             GENRES_INDEX, MOVIES_INDEX)
+from utils.constants import (FILM_WORK_STATE_KEY, GENRE_STATE_KEY,
+                             GENRES_INDEX, MOVIES_INDEX, PERSON_STATE_KEY,
+                             PERSONS_INDEX)
 from utils.decorators import backoff
 
 
@@ -36,8 +41,9 @@ def main():
 
     elastic = Elasticsearch(hosts=elastic_settings.host)
     indexes = [
-        Index(index=MOVIES_INDEX, mapping=ETL_FILMS_MAPPING),
-        Index(index=GENRES_INDEX, mapping=ETL_GENRES_MAPPING),
+        Index(index=MOVIES_INDEX, mapping=FILMS_MAPPING),
+        Index(index=GENRES_INDEX, mapping=GENRES_MAPPING),
+        Index(index=PERSONS_INDEX, mapping=PERSONS_MAPPING),
     ]
     for index in indexes:
         try:
@@ -66,8 +72,16 @@ def main():
             el_transformer=GenresElasticTransformer,
             sql_path="storage/postgresql/queries/load_genres.sql",
         )
+        person_task = Task(
+            state_key=PERSON_STATE_KEY,
+            elastic_index=PERSONS_INDEX,
+            extractor=PersonsPostgresExtractor,
+            el_transformer=PersonsElasticTransformer,
+            sql_path="storage/postgresql/queries/load_persons.sql",
+        )
         manager.load_to_elastic(film_work_task)
         manager.load_to_elastic(genre_task)
+        manager.load_to_elastic(person_task)
 
 
 if __name__ == "__main__":

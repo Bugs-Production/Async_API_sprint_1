@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -6,13 +5,12 @@ import psycopg
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 
-from dto.models import (ElasticFilmWork, ElasticGenre, PostgresFilmWork,
-                        PostgresGenre)
+from dto.extractors import PostgresExtractor
+from dto.transformers import ElasticTransformer
 from state.state import State
 from utils.constants import PG_FETCH_SIZE
 from utils.decorators import backoff
 from utils.logger import logger
-from utils.utils import create_elastic_objects_list
 
 
 class Postgres:
@@ -27,97 +25,6 @@ class Postgres:
             cursor.execute(query, params)
             rows = cursor.fetchmany(PG_FETCH_SIZE)
             return rows
-
-
-class PostgresExtractor(ABC):
-    @staticmethod
-    @abstractmethod
-    def extract(data: dict):
-        """Валидирует данные, пришедшие из Postgres."""
-        pass
-
-
-class FilmsPostgresExtractor(PostgresExtractor):
-    @staticmethod
-    def extract(data: dict) -> PostgresFilmWork:
-        film_work = PostgresFilmWork(
-            id=data["id"],
-            title=data["title"],
-            description=data["description"],
-            rating=data["rating"],
-            type=data["type"],
-            created=data["created"],
-            modified=data["modified"],
-            genres=data["genres"],
-            actors=data["actors"],
-            directors=data["directors"],
-            writers=data["writers"],
-        )
-        return film_work
-
-
-class GenresPostgresExtractor(PostgresExtractor):
-    @staticmethod
-    def extract(data: dict) -> PostgresGenre:
-        genre = PostgresGenre(
-            id=data["id"],
-            name=data["name"],
-            description=data["description"],
-            created=data["created"],
-            modified=data["modified"]
-        )
-        return genre
-
-
-class ElasticTransformer(ABC):
-    @staticmethod
-    @abstractmethod
-    def transform(data):
-        pass
-
-
-class FilmsElasticTransformer(ElasticTransformer):
-    @staticmethod
-    def transform(data: PostgresFilmWork) -> ElasticFilmWork:
-        """Приводит данные из объекта PostgresFilmWork в формат
-        для загрузки в Elastic.
-        """
-        el_actors = create_elastic_objects_list(data.actors)
-
-        el_directors = create_elastic_objects_list(data.directors)
-
-        el_writers = create_elastic_objects_list(data.writers)
-
-        genres = create_elastic_objects_list(data.genres)
-
-        film_work = ElasticFilmWork(
-            id=str(data.id),
-            imdb_rating=data.rating,
-            genres=[genre.model_dump() for genre in genres],
-            title=data.title,
-            description=data.description,
-            actors_names=[person.name for person in el_actors],
-            directors_names=[person.name for person in el_directors],
-            writers_names=[person.name for person in el_writers],
-            actors=[person.model_dump() for person in el_actors],
-            directors=[person.model_dump() for person in el_directors],
-            writers=[person.model_dump() for person in el_writers],
-        )
-
-        return film_work
-
-
-class GenresElasticTransformer(ElasticTransformer):
-    @staticmethod
-    def transform(data: PostgresGenre) -> ElasticGenre:
-        genre = ElasticGenre(
-            id=str(data.id),
-            name=data.name,
-            description=data.description,
-            created=data.created.isoformat(),
-            modified=data.modified.isoformat()
-        )
-        return genre
 
 
 class ElasticLoader:
@@ -177,8 +84,8 @@ class LoadManager:
             res = ElasticLoader.load(
                 self.elastic, task.elastic_index, elastic_objects
             )
-            if res.get('errors', True):
-                logger.error('Elastic loader have a error!')
+            if res.get("errors", True):
+                logger.error("Elastic loader have a error!")
                 break
             last_modified_obj = tmp_last_obj_modified
             self.state.save_state(task.state_key, str(last_modified_obj))

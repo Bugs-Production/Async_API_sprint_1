@@ -64,4 +64,11 @@ class PostgresPersonFilmwork(BaseModel):
 class PostgresPerson(BaseModel):
     id: UUID
     full_name: str
-    films: List[PostgresPersonFilmwork] | None = None
+    modified: datetime
+    films: List[dict] | None = None
+
+
+class ElasticPerson(BaseModel):
+    id: str
+    full_name: str
+    films: List[Dict[str, Any]] | None = None
