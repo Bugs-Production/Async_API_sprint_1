@@ -43,7 +43,6 @@ class ElasticLoader:
                 }
             )
             body.append({**_object.model_dump()})
-            logger.info(body)
         res = client.bulk(index=index, body=body)
         logger.info(res)
         return res
