@@ -3,16 +3,17 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.paginator import Paginator
-from .api_models import Film, FilmDetail
 from services.film import FilmService, get_film_service
+from .api_models import Film, FilmDetail
 
 router = APIRouter()
 
 
-@router.get('/search', response_model=list[Film])
+@router.get("/search", response_model=list[Film])
+@router.get("/search", response_model=list[FilmShort])
 async def film_search(
     query: str,
-    sort: str = '-imdb_rating',
+    sort: str = "-imdb_rating",
     paginator: Paginator = Depends(Paginator),
     film_service: FilmService = Depends(get_film_service)
 ) -> list[Film]:

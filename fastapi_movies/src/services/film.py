@@ -7,8 +7,10 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
-from models.models import Film
-from .utils import get_offset_params, get_genre_filter_params, get_sort_params, get_search_params
+
+from models.film import Film
+from .utils import (get_genre_filter_params, get_offset_params,
+                    get_search_params, get_sort_params)
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
@@ -68,7 +70,7 @@ class FilmService:
 
         hits_films = films["hits"]["hits"]
 
-        return [Film(**film['_source']) for film in hits_films]
+        return [Film(**film["_source"]) for film in hits_films]
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:

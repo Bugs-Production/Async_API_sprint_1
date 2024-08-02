@@ -1,6 +1,7 @@
+from typing import Annotated
+
 from fastapi import Query
 from pydantic import BaseModel
-from typing import Annotated
 
 
 class Paginator(BaseModel):

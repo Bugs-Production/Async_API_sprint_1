@@ -1,13 +1,7 @@
 from abc import ABC, abstractmethod
 
-from dto.models import (
-    ElasticFilmWork,
-    ElasticGenre,
-    ElasticPerson,
-    PostgresFilmWork,
-    PostgresGenre,
-    PostgresPerson,
-)
+from dto.models import (ElasticFilmWork, ElasticGenre, ElasticPerson,
+                        PostgresFilmWork, PostgresGenre, PostgresPerson)
 from utils.utils import create_elastic_objects_list
 
 

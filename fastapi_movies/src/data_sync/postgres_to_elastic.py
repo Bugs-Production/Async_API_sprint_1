@@ -1,9 +1,4 @@
 import psycopg
-from elasticsearch import Elasticsearch, NotFoundError
-from psycopg import ClientCursor
-from psycopg.rows import dict_row
-from pydantic import BaseModel
-
 from config.config import ElasticSettings, PostgresSettings
 from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
                                     PERSONS_MAPPING)
@@ -13,6 +8,10 @@ from dto.loaders import LoadManager, Postgres, Task
 from dto.transformers import (FilmsElasticTransformer,
                               GenresElasticTransformer,
                               PersonsElasticTransformer)
+from elasticsearch import Elasticsearch, NotFoundError
+from psycopg import ClientCursor
+from psycopg.rows import dict_row
+from pydantic import BaseModel
 from state.json_storage import JsonStorage
 from state.state import State
 from utils.constants import (FILM_WORK_STATE_KEY, GENRE_STATE_KEY,

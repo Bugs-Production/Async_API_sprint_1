@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
 
 
 class IdMixIn(BaseModel):
@@ -11,7 +12,7 @@ class Genre(IdMixIn):
 
 
 class Person(IdMixIn):
-    full_name: str = Field(alias='name')
+    full_name: str = Field(alias="name")
 
 
 class PersonFilm(IdMixIn):
