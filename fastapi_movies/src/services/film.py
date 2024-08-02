@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
-from models.film import Film
+from models.models import Film
 
 from .utils import (get_genre_filter_params, get_offset_params,
                     get_search_params, get_sort_params)
