@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: movies_postgres
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/data_dump.sql:/docker-entrypoint-initdb.d/data_dump.sql
+      - ./data/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+  fastapi:
+    container_name: movies_fastapi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+      - es
+    ports:
+      - "80:80"
+  redis:
+    image: redis:latest
+    container_name: movies_redis
+    restart: always
+    volumes:
+        - ~/redis_data:/root/redis
+        - ~/redis.conf:/usr/local/etc/redis/redis.conf
+    env_file:
+      - .env
+  es:
+    image: elasticsearch:8.6.2
+    container_name: movies_es
+    environment:
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200/" ]
+      interval: 10s
+      timeout: 20s
+      retries: 3
+  postgres_to_elastic:
+    container_name: postgres_to_elastic
+    build:
+      context: .
+      dockerfile: data_sync.Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      es:
+        condition: service_healthy
+
+
+volumes:
+  postgres_data:
