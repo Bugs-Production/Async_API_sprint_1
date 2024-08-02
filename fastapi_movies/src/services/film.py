@@ -9,10 +9,8 @@ from db.elastic import get_elastic
 from db.redis import get_redis
 from models.models import Film
 
-from .utils import (get_genre_filter_params, get_offset_params,
-                    get_search_params, get_sort_params)
-
-FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
+from .utils import (CACHE_EXPIRE_IN_SECONDS, get_genre_filter_params,
+                    get_offset_params, get_search_params, get_sort_params)
 
 
 class FilmService:
@@ -95,7 +93,7 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(film.id, film.json(), FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(film.id, film.json(), CACHE_EXPIRE_IN_SECONDS)
 
 
 @lru_cache()
