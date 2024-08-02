@@ -37,13 +37,13 @@ def get_genre_filter_params(genre_filter: str | None) -> dict[str, Any]:
     return genre_params
 
 
-def get_search_params(filed: str, query: str) -> dict[str, Any]:
+def get_search_params(field: str, query: str) -> dict[str, Any]:
     """Параметры для запроса в Elastic с простым поисковым запросом по определенному полю"""
 
     return {
         "query": {
             "match": {
-                filed: {
+                field: {
                     "query": query,
                 }
             }

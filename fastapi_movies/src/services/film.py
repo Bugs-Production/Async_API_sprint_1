@@ -60,7 +60,7 @@ class FilmService:
         page_size: int,
     ) -> list[Film] | None:
         sort_params = get_sort_params(sorting)
-        search_params = get_search_params(filed="title", query=query)
+        search_params = get_search_params(field="title", query=query)
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **search_params, **offset_params}
 

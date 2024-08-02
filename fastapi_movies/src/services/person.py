@@ -34,7 +34,7 @@ class PersonService:
         page_num: int,
         page_size: int,
     ) -> list[PersonDetail] | None:
-        search_params = get_search_params(filed="full_name", query=query)
+        search_params = get_search_params(field="full_name", query=query)
         offset_params = get_offset_params(page_num, page_size)
         params = {**search_params, **offset_params}
 
