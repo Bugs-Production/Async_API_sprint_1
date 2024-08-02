@@ -15,12 +15,21 @@ class Person(IdMixIn):
     full_name: str = Field(alias="name")
 
 
-class FilmShort(IdMixIn):
+class PersonFilm(IdMixIn):
+    roles: list[str]
+
+
+class PersonDetail(IdMixIn):
+    full_name: str
+    films: list[PersonFilm] | None = None
+
+
+class Film(IdMixIn):
     title: str
     imdb_rating: float | None
 
 
-class FilmDetails(IdMixIn):
+class FilmDetail(IdMixIn):
     title: str
     imdb_rating: float | None
     description: str | None
