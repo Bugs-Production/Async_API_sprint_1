@@ -11,7 +11,6 @@ router = APIRouter()
 
 
 @router.get("/search", response_model=list[Film])
-@router.get("/search", response_model=list[FilmShort])
 async def film_search(
     query: str,
     sort: str = "-imdb_rating",
