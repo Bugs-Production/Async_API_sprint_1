@@ -6,7 +6,7 @@ SELECT
       'id', film_work_id,
       'roles', roles,
       'title', title,
-      'rating', rating
+      'imdb_rating', rating
    )), '[]') as "films"
 FROM (
     SELECT
