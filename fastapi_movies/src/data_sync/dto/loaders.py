@@ -2,11 +2,10 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 import psycopg
-from elasticsearch import Elasticsearch
-from pydantic import BaseModel
-
 from dto.extractors import PostgresExtractor
 from dto.transformers import ElasticTransformer
+from elasticsearch import Elasticsearch
+from pydantic import BaseModel
 from state.state import State
 from utils.constants import PG_FETCH_SIZE
 from utils.decorators import backoff
@@ -81,9 +80,7 @@ class LoadManager:
                 elastic_obj = task.el_transformer.transform(pg_obj)
                 elastic_objects.append(elastic_obj)
                 tmp_last_obj_modified = pg_obj.modified
-            res = ElasticLoader.load(
-                self.elastic, task.elastic_index, elastic_objects
-            )
+            res = ElasticLoader.load(self.elastic, task.elastic_index, elastic_objects)
             if res.get("errors", True):
                 logger.error("Elastic loader have a error!")
                 break
