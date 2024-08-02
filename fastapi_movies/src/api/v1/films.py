@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.paginator import Paginator
 from services.film import FilmService, get_film_service
+
 from .api_models import Film, FilmDetail
 
 router = APIRouter()
@@ -15,7 +16,7 @@ async def film_search(
     query: str,
     sort: str = "-imdb_rating",
     paginator: Paginator = Depends(Paginator),
-    film_service: FilmService = Depends(get_film_service)
+    film_service: FilmService = Depends(get_film_service),
 ) -> list[Film]:
 
     searched_films = await film_service.search_films(
@@ -36,7 +37,7 @@ async def films(
     sort: str | None = "-imdb_rating",
     genre: str | None = None,
     paginator: Paginator = Depends(Paginator),
-    film_service: FilmService = Depends(get_film_service)
+    film_service: FilmService = Depends(get_film_service),
 ) -> list[Film]:
     """
     Для сортировки используется default="-imdb_rating" по бизнес логике,
