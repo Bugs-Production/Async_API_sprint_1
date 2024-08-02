@@ -17,7 +17,7 @@ class PersonService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = redis
         self.elastic = elastic
-        self._index = "persons_sprint4_test"
+        self._index = "persons"
 
     async def get_by_id(self, person_id: str) -> Optional[PersonDetail]:
         person = await self._person_from_cache(person_id)
