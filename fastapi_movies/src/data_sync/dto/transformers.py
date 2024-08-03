@@ -9,15 +9,18 @@ class ElasticTransformer(ABC):
     @staticmethod
     @abstractmethod
     def transform(data):
+        """
+        Приводит данные из постгреса к формату
+        для загрузки в Elastic
+        :param data: данные, которые нужно привести к формату эластика
+        :return: валидированные данные в формате эластика
+        """
         pass
 
 
 class FilmsElasticTransformer(ElasticTransformer):
     @staticmethod
     def transform(data: PostgresFilmWork) -> ElasticFilmWork:
-        """Приводит данные из объекта PostgresFilmWork в формат
-        для загрузки в Elastic.
-        """
         el_actors = create_elastic_objects_list(data.actors)
 
         el_directors = create_elastic_objects_list(data.directors)
