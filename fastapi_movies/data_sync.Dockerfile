@@ -10,9 +10,13 @@ COPY src /fastapi_movies/src
 COPY cronfile /etc/cron.d/postgres_to_elastic
 COPY .env /fastapi_movies/
 
-RUN chmod 0644 /etc/cron.d/postgres_to_elastic
+# создание директории и файла для логов крона
+RUN apt-get update && apt-get install -y cron \
+    && mkdir -p /var/log/cron \
+    && touch /var/log/cron/cron.log \
+    && chmod 664 /var/log/cron/cron.log
 
-RUN apt-get update && apt-get install -y cron
-RUN crontab /etc/cron.d/postgres_to_elastic
+RUN chmod 0644 /etc/cron.d/postgres_to_elastic \
+    && crontab /etc/cron.d/postgres_to_elastic
 
 CMD ["cron", "-f"]
