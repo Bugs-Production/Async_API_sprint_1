@@ -9,9 +9,7 @@ from db.elastic import get_elastic
 from db.redis import get_redis
 from models.models import GenreDetail
 
-from .utils import get_offset_params
-
-GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
+from .utils import CACHE_EXPIRE_IN_SECONDS, get_offset_params
 
 
 class GenreService:
@@ -20,7 +18,9 @@ class GenreService:
         self.elastic = elastic
         self._index = "genres"
 
-    async def get_all_genres(self, page_num: int, page_size: int):
+    async def get_all_genres(
+            self, page_num: int, page_size: int
+    ) -> list[GenreDetail]:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
@@ -38,13 +38,15 @@ class GenreService:
             # Если жанра нет в кеше, то ищем его в Elasticsearch
             genre = await self._get_genre_from_elastic(genre_id)
             if not genre:
-                # Если он отсутствует в Elasticsearch, значит, жанра вообще нет в базе
+                # Если отсутствует в Elasticsearch - жанра вообще нет в базе
                 return None
             await self._put_genre_to_cache(genre)
 
         return genre
 
-    async def _get_genre_from_elastic(self, genre_id: str) -> Optional[GenreDetail]:
+    async def _get_genre_from_elastic(
+            self, genre_id: str
+    ) -> Optional[GenreDetail]:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
@@ -67,7 +69,7 @@ class GenreService:
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
         await self.redis.set(
-            genre.id, genre.model_dump_json(), GENRE_CACHE_EXPIRE_IN_SECONDS
+            genre.id, genre.model_dump_json(), CACHE_EXPIRE_IN_SECONDS
         )
 
 
