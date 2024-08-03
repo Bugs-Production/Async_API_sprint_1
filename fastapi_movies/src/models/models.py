@@ -12,6 +12,13 @@ class Genre(IdMixIn):
     description: str | None = None
 
 
+class GenreDetail(IdMixIn):
+    name: str
+    description: str | None = None
+    created: str
+    modified: str
+
+
 class PersonFilm(IdMixIn):
     roles: list[str]
     title: str
