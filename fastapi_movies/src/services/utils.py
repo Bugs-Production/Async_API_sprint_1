@@ -1,5 +1,7 @@
 from typing import Any
 
+CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
+
 
 def get_offset_params(page_num: int, page_size: int) -> dict[str, int]:
     """Параметры для запроса в Elastic с offset параметрами"""
@@ -35,13 +37,13 @@ def get_genre_filter_params(genre_filter: str | None) -> dict[str, Any]:
     return genre_params
 
 
-def get_search_params(query: str) -> dict[str, Any]:
-    """Параметры для запроса в Elastic с простым поисковым запросом по названию фильма"""
+def get_search_params(field: str, query: str) -> dict[str, Any]:
+    """Параметры для запроса в Elastic с простым поисковым запросом по определенному полю"""
 
     return {
         "query": {
             "match": {
-                "title": {
+                field: {
                     "query": query,
                 }
             }

@@ -158,7 +158,7 @@ PERSONS_MAPPING = {
                     "id": {"type": "text"},
                     "roles": {"type": "text"},
                     "title": {"type": "text"},
-                    "rating": {"type": "float"},
+                    "imdb_rating": {"type": "float"},
                 },
             },
         },

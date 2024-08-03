@@ -15,7 +15,7 @@ class Genre(IdMixIn):
 class PersonFilm(IdMixIn):
     roles: list[str]
     title: str
-    rating: float | None
+    imdb_rating: float | None
 
 
 class PersonDetail(IdMixIn):
