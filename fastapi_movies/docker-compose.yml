@@ -23,6 +23,8 @@ services:
       - postgres
       - redis
       - es
+    volumes:
+      - ./src:/fastapi_movies/src
     ports:
       - "80:80"
 

@@ -1,5 +1,6 @@
+import json
 from functools import lru_cache
-from typing import Optional
+from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -22,7 +23,7 @@ class FilmService:
     # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
     async def get_by_id(self, film_id: str) -> Optional[Film]:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
-        film = await self._film_from_cache(film_id)
+        film = await self._film_or_films_from_cache(film_id=film_id)
         if not film:
             # Если фильма нет в кеше, то ищем его в Elasticsearch
             film = await self._get_film_from_elastic(film_id)
@@ -30,7 +31,7 @@ class FilmService:
                 # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
                 return None
             # Сохраняем фильм в кеш
-            await self._put_film_to_cache(film)
+            await self._put_film_or_films_to_cache(films_or_film=film)
 
         return film
 
@@ -46,11 +47,24 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **genre_params, **offset_params}
 
-        films = await self.elastic.search(index=self._index, body=params)
+        # пытаемся найти фильмы в кэше
+        list_films = await self._film_or_films_from_cache(page_num=page_num)
 
-        hits_films = films["hits"]["hits"]
+        if not list_films:  # если в кэше нет, идем в эластик
+            films = await self.elastic.search(index=self._index, body=params)
 
-        return [Film(**film["_source"]) for film in hits_films]
+            hits_films = films["hits"]["hits"]
+
+            list_films = [Film(**film["_source"]) for film in hits_films]
+
+            # сохраняем в кэш по номеру страницы
+            await self._put_film_or_films_to_cache(
+                films_or_film=list_films, page_num=page_num
+            )
+
+            return list_films
+
+        return list_films
 
     async def search_films(
         self,
@@ -64,11 +78,24 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **search_params, **offset_params}
 
-        films = await self.elastic.search(index=self._index, body=params)
+        # пытаемся найти фильмы в кэше
+        list_films = await self._film_or_films_from_cache(page_num=page_num)
 
-        hits_films = films["hits"]["hits"]
+        if not list_films:
+            films = await self.elastic.search(index=self._index, body=params)
 
-        return [Film(**film["_source"]) for film in hits_films]
+            hits_films = films["hits"]["hits"]
+
+            list_films = [Film(**film["_source"]) for film in hits_films]
+
+            # сохраняем в кэш по номеру страницы
+            await self._put_film_or_films_to_cache(
+                page_num=page_num, films_or_film=list_films
+            )
+
+            return list_films
+
+        return list_films
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
@@ -77,23 +104,40 @@ class FilmService:
             return None
         return Film(**doc["_source"])
 
-    async def _film_from_cache(self, film_id: str) -> Optional[Film]:
+    async def _film_or_films_from_cache(
+        self, film_id=None, page_num=None
+    ) -> Optional[List[Film]]:
         # Пытаемся получить данные о фильме из кеша, используя команду get
         # https://redis.io/commands/get/
-        data = await self.redis.get(film_id)
-        if not data:
-            return None
+        if (
+            not page_num
+        ):  # если нет номера страницы, значит будет возвращаться один фильм
+            data = await self.redis.get(film_id)
+            if not data:
+                return None
 
-        # pydantic предоставляет удобное API для создания объекта моделей из json
-        film = Film.parse_raw(data)
-        return film
+            film = Film.parse_raw(data)
+            return film
 
-    async def _put_film_to_cache(self, film: Film):
-        # Сохраняем данные о фильме, используя команду set
-        # Выставляем время жизни кеша — 5 минут
-        # https://redis.io/commands/set/
-        # pydantic позволяет сериализовать модель в json
-        await self.redis.set(film.id, film.json(), CACHE_EXPIRE_IN_SECONDS)
+        # иначе же отдаем список фильмов по номеру страницы
+        films_json = await self.redis.get(page_num)
+        if films_json:
+            films_data = json.loads(films_json)
+            return [Film.parse_obj(film_data) for film_data in films_data]
+        return None
+
+    async def _put_film_or_films_to_cache(
+        self, films_or_film: Union[Film, List[Film]], page_num: Optional[int] = None
+    ) -> None:
+        # если нет номера страницы, сохраняем в кэш один фильм
+        if not page_num:
+            await self.redis.set(
+                films_or_film.id, films_or_film.json(), CACHE_EXPIRE_IN_SECONDS
+            )
+        else:
+            # иначе сохраняем список фильмов
+            films_json = json.dumps([f.dict() for f in films_or_film])
+            await self.redis.set(page_num, films_json, CACHE_EXPIRE_IN_SECONDS)
 
 
 @lru_cache()

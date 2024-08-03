@@ -18,9 +18,7 @@ class GenreService:
         self.elastic = elastic
         self._index = "genres"
 
-    async def get_all_genres(
-            self, page_num: int, page_size: int
-    ) -> list[GenreDetail]:
+    async def get_all_genres(self, page_num: int, page_size: int) -> list[GenreDetail]:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
@@ -44,9 +42,7 @@ class GenreService:
 
         return genre
 
-    async def _get_genre_from_elastic(
-            self, genre_id: str
-    ) -> Optional[GenreDetail]:
+    async def _get_genre_from_elastic(self, genre_id: str) -> Optional[GenreDetail]:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
@@ -68,9 +64,7 @@ class GenreService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(
-            genre.id, genre.model_dump_json(), CACHE_EXPIRE_IN_SECONDS
-        )
+        await self.redis.set(genre.id, genre.model_dump_json(), CACHE_EXPIRE_IN_SECONDS)
 
 
 @lru_cache()
