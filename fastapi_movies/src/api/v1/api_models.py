@@ -37,3 +37,10 @@ class FilmDetail(IdMixIn):
     actors: list[Person]
     writers: list[Person]
     directors: list[Person]
+
+
+class GenreDetail(IdMixIn):
+    name: str
+    description: str | None = None
+    created: str
+    modified: str
