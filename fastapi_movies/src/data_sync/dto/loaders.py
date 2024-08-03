@@ -55,6 +55,18 @@ class Task:
         el_transformer: ElasticTransformer,
         sql_path: str,
     ):
+        """
+        Представляет собой задачу на загрузку данных из постгреса в эластик
+        :param state_key: ключ для хранилища, по которому ищем дату
+        последнего изменения
+        :param elastic_index: ключ индекса в эластике
+        :param extractor: объект, предназначенный для получения данных из
+        постгреса и их валидации
+        :param el_transformer: объект, преобразующие данные из extractor к
+        формату данных для эластика
+        :param sql_path: путь к sql файлу, по которому получаем данные из
+        постгреса
+        """
         self.state_key = state_key
         self.elastic_index = elastic_index
         self.extractor = extractor
@@ -64,6 +76,14 @@ class Task:
 
 class LoadManager:
     def __init__(self, pg: Postgres, elastic: Elasticsearch, state: State):
+        """
+        Класс менеджер, отвечающий за непосредственную загрузку данных
+        в эластик
+        :param pg: объект постгреса, которые отвечает за выполнение sql
+        :param elastic: клиент эластика
+        :param state: объект хранилища, которые отвечает за получение последней
+        сохраненной в эластик записи и записи свежих значений
+        """
         self.pg = pg
         self.elastic = elastic
         self.state = state

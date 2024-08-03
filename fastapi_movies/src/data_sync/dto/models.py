@@ -20,7 +20,7 @@ class PostgresFilmWork(BaseModel):
 
 
 class ElasticObject(BaseModel):
-    id: UUID
+    id: str
     name: str
 
 
