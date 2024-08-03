@@ -1,13 +1,15 @@
-from elasticsearch import AsyncElasticsearch, NotFoundError
-from redis.asyncio import Redis
-from models.models import GenreDetail
-from fastapi import Depends
-from db.elastic import get_elastic
-from db.redis import get_redis
 from functools import lru_cache
-from .utils import get_search_params, get_offset_params
 from typing import Optional
 
+from elasticsearch import AsyncElasticsearch, NotFoundError
+from fastapi import Depends
+from redis.asyncio import Redis
+
+from db.elastic import get_elastic
+from db.redis import get_redis
+from models.models import GenreDetail
+
+from .utils import get_offset_params
 
 GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
@@ -18,9 +20,8 @@ class GenreService:
         self.elastic = elastic
         self._index = "genres"
 
-    async def get_all_genres(self, page_num: int,
-                             page_size: int):
-        query = {'query': {'match_all': {}}}
+    async def get_all_genres(self, page_num: int, page_size: int):
+        query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
 
@@ -65,12 +66,14 @@ class GenreService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set/
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(genre.id, genre.model_dump_json(), GENRE_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(
+            genre.id, genre.model_dump_json(), GENRE_CACHE_EXPIRE_IN_SECONDS
+        )
 
 
 @lru_cache()
 def get_genre_service(
-        redis: Redis = Depends(get_redis),
-        elastic: AsyncElasticsearch = Depends(get_elastic),
+    redis: Redis = Depends(get_redis),
+    elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
     return GenreService(redis, elastic)
