@@ -45,7 +45,7 @@ services:
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9200/" ]
       interval: 10s
-      timeout: 20s
+      timeout: 30s
       retries: 3
   postgres_to_elastic:
     container_name: postgres_to_elastic
