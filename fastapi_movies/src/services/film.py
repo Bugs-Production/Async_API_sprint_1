@@ -1,5 +1,4 @@
 import json
-import logging
 from functools import lru_cache
 from typing import List, Optional, Union
 
@@ -13,8 +12,6 @@ from models.models import Film
 
 from .utils import (CACHE_EXPIRE_IN_SECONDS, get_genre_filter_params,
                     get_offset_params, get_search_params, get_sort_params)
-
-logger = logging.getLogger(__name__)
 
 
 class FilmService:
@@ -59,7 +56,6 @@ class FilmService:
         try:
             films = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
 
         hits_films = films["hits"]["hits"]
@@ -93,7 +89,6 @@ class FilmService:
         try:
             films = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
 
         hits_films = films["hits"]["hits"]
@@ -111,7 +106,6 @@ class FilmService:
         try:
             doc = await self.elastic.get(index=self._index, id=film_id)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
         return Film(**doc["_source"])
 
@@ -121,7 +115,7 @@ class FilmService:
         if (
             films_page_num
         ):  # если есть номер страницы, отдаем список фильмов по странице
-            films_json = await self.redis.get(films_page_num)
+            films_json = await self.redis.get(f"films_{str(films_page_num)}")
             if films_json:
                 films_data = json.loads(films_json)
                 return [Film.parse_obj(film_data) for film_data in films_data]
@@ -135,8 +129,7 @@ class FilmService:
             return None
 
         # возвращаем фильм
-        film = Film.parse_raw(data)
-        return film
+        return Film.parse_raw(data)
 
     async def _put_film_or_films_to_cache(
         self,

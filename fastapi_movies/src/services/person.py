@@ -1,5 +1,4 @@
 import json
-import logging
 from functools import lru_cache
 from typing import List, Optional, Union
 
@@ -13,8 +12,6 @@ from models.models import PersonDetail
 
 from .utils import (CACHE_EXPIRE_IN_SECONDS, get_offset_params,
                     get_search_params)
-
-logger = logging.getLogger(__name__)
 
 
 class PersonService:
@@ -44,7 +41,7 @@ class PersonService:
 
         # находим личностей в кэше
         persons_list = await self._person_or_persons_from_cache(
-            person_page_number=page_num
+            persons_page_number=page_num
         )
         if persons_list:
             return persons_list
@@ -52,7 +49,6 @@ class PersonService:
         try:
             persons = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
 
         hits_persons = persons["hits"]["hits"]
@@ -68,16 +64,15 @@ class PersonService:
         try:
             doc = await self.elastic.get(index=self._index, id=person_id)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
         return PersonDetail(**(doc["_source"]))
 
     async def _person_or_persons_from_cache(
-        self, person_id: Optional[str] = None, person_page_number: Optional[int] = None
+        self, person_id: Optional[str] = None, persons_page_number: Optional[int] = None
     ) -> Optional[Union[PersonDetail, List[PersonDetail], None]]:
         # если есть номер страницы, отдаем список личностей
-        if person_page_number:
-            list_persons = await self.redis.get(person_page_number)
+        if persons_page_number:
+            list_persons = await self.redis.get(f"persons_{str(persons_page_number)}")
             if list_persons:
                 persons_json = json.loads(list_persons)
                 return [PersonDetail.parse_obj(person) for person in persons_json]
@@ -88,8 +83,7 @@ class PersonService:
         if not data:
             return None
 
-        person = PersonDetail.parse_raw(data)
-        return person
+        return PersonDetail.parse_raw(data)
 
     async def _put_persons_or_person_to_cache(
         self,

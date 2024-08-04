@@ -1,5 +1,4 @@
 import json
-import logging
 from functools import lru_cache
 from typing import List, Optional, Union
 
@@ -12,8 +11,6 @@ from db.redis import get_redis
 from models.models import GenreDetail
 
 from .utils import CACHE_EXPIRE_IN_SECONDS, get_offset_params
-
-logger = logging.getLogger(__name__)
 
 
 class GenreService:
@@ -39,7 +36,6 @@ class GenreService:
         try:
             genres = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
 
         hits_genres = genres["hits"]["hits"]
@@ -71,7 +67,6 @@ class GenreService:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
-            logger.info("ElasticSearch connect error")
             return None
         return GenreDetail(**doc["_source"])
 
@@ -82,7 +77,7 @@ class GenreService:
     ) -> Optional[GenreDetail]:
         # если есть номер страницы, возвращаем список жанров
         if genres_page_number:
-            list_genres = await self.redis.get(genres_page_number)
+            list_genres = await self.redis.get(f"genres_{str(genres_page_number)}")
             if list_genres:
                 genres_json = json.loads(list_genres)
                 return [GenreDetail.parse_obj(genre) for genre in genres_json]
@@ -93,8 +88,7 @@ class GenreService:
         if not data:
             return None
 
-        genre = GenreDetail.parse_raw(data)
-        return genre
+        return GenreDetail.parse_raw(data)
 
     async def _put_genre_or_genres_to_cache(
         self,
