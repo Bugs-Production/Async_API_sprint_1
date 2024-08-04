@@ -94,7 +94,7 @@ class PersonService:
         # если есть номер страницы, сохраняем список личностей
         if persons_page_nummer:
             persons_json = json.dumps([person.dict() for person in persons_or_person])
-            await self.redis.set(persons_page_nummer, persons_json, CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(f"persons_{str(persons_page_nummer)}", persons_json, CACHE_EXPIRE_IN_SECONDS)
         else:
             await self.redis.set(persons_or_person.id, persons_or_person.json(), CACHE_EXPIRE_IN_SECONDS)
 

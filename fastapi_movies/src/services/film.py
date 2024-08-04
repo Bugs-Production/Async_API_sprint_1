@@ -130,7 +130,7 @@ class FilmService:
         # если есть номер страницы, сохраняем в кэш список фильмов
         if films_page_num:
             films_json = json.dumps([f.dict() for f in films_or_film])
-            await self.redis.set(films_page_num, films_json, CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(f"films_{str(films_page_num)}", films_json, CACHE_EXPIRE_IN_SECONDS)
         else:
             # иначе сохраняем один фильм
             await self.redis.set(
