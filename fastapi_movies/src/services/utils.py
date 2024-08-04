@@ -49,3 +49,19 @@ def get_search_params(field: str, query: str) -> dict[str, Any]:
             }
         }
     }
+
+
+def create_cache_key_for_films(
+    page_num: int, page_size: int, sort: str, genre: str, search: str
+) -> str:
+    """Создание ключа для кэша фильмов, на основе параметров запроса"""
+
+    cache_key = "films_{page_num}_{page_size}_{sort}_{genre}_{search}".format(
+        page_num=page_num if page_num is not None else "",
+        page_size=page_size if page_size is not None else "",
+        sort=sort if sort is not None else "",
+        genre=genre if genre is not None else "",
+        search=search if search is not None else "",
+    ).strip("_")
+
+    return cache_key

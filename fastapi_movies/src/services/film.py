@@ -10,8 +10,9 @@ from db.elastic import get_elastic
 from db.redis import get_redis
 from models.models import Film
 
-from .utils import (CACHE_EXPIRE_IN_SECONDS, get_genre_filter_params,
-                    get_offset_params, get_search_params, get_sort_params)
+from .utils import (CACHE_EXPIRE_IN_SECONDS, create_cache_key_for_films,
+                    get_genre_filter_params, get_offset_params,
+                    get_search_params, get_sort_params)
 
 
 class FilmService:
@@ -49,7 +50,10 @@ class FilmService:
 
         # пытаемся найти фильмы в кэше
         list_films = await self._film_or_films_from_cache(
-            films_page_num=page_num, films_page_size=page_size
+            films_page_num=page_num,
+            films_page_size=page_size,
+            films_sort=sorting,
+            films_genre=genre_filter,
         )
         if list_films:
             return list_films
@@ -64,11 +68,13 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по номеру страницы и ее размеру
+        # сохраняем в кэш по параметрам
         await self._put_film_or_films_to_cache(
             films_or_film=list_films,
             films_page_num=page_num,
             films_page_size=page_size,
+            films_genre=genre_filter,
+            films_sort=sorting,
         )
 
         return list_films
@@ -87,7 +93,10 @@ class FilmService:
 
         # пытаемся найти фильмы в кэше
         list_films = await self._film_or_films_from_cache(
-            films_page_num=page_num, films_page_size=page_size
+            films_page_num=page_num,
+            films_page_size=page_size,
+            films_sort=sorting,
+            films_search=query,
         )
         if list_films:
             return list_films
@@ -101,11 +110,13 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по номеру страницы и ее размеру
+        # сохраняем в кэш по параметрам
         await self._put_film_or_films_to_cache(
             films_page_num=page_num,
             films_or_film=list_films,
             films_page_size=page_size,
+            films_search=query,
+            films_sort=sorting,
         )
 
         return list_films
@@ -122,13 +133,23 @@ class FilmService:
         film_id: Union[str] = None,
         films_page_num: Union[int] = None,
         films_page_size: Union[int] = None,
+        films_sort: Optional[str] = None,
+        films_genre: Optional[str] = None,
+        films_search: Optional[str] = None,
     ) -> Optional[List[Film]]:
         if (
             films_page_num and films_page_size
         ):  # если есть номер страницы и размер, отдаем список фильмов по странице
-            films_json = await self.redis.get(
-                f"films_{str(films_page_num)}_{str(films_page_size)}"
+            # формируем ключ
+            cache_key = create_cache_key_for_films(
+                page_num=films_page_num,
+                page_size=films_page_size,
+                sort=films_sort,
+                genre=films_genre,
+                search=films_search,
             )
+
+            films_json = await self.redis.get(cache_key)
             if films_json:
                 films_data = json.loads(films_json)
                 return [Film.parse_obj(film_data) for film_data in films_data]
@@ -149,12 +170,24 @@ class FilmService:
         films_or_film: Union[Film, List[Film]],
         films_page_num: Optional[int] = None,
         films_page_size: Optional[int] = None,
+        films_sort: Optional[str] = None,
+        films_genre: Optional[str] = None,
+        films_search: Optional[str] = None,
     ) -> None:
-        # если есть номер страницы и размер, сохраняем в кэш список фильмов
+        # Если указаны номер страницы и размер страницы, сохраняем список фильмов
         if films_page_num and films_page_size:
+            # формируем ключ для кэша
+            cache_key = create_cache_key_for_films(
+                page_num=films_page_num,
+                page_size=films_page_size,
+                sort=films_sort,
+                genre=films_genre,
+                search=films_search,
+            )
+
             films_json = json.dumps([f.dict() for f in films_or_film])
             await self.redis.set(
-                f"films_{str(films_page_num)}_{str(films_page_size)}",
+                cache_key,
                 films_json,
                 CACHE_EXPIRE_IN_SECONDS,
             )
