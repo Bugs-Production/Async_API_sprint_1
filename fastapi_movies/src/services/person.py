@@ -41,6 +41,7 @@ class PersonService:
 
         # находим личностей в кэше
         persons_list = await self._person_or_persons_from_cache(
+            person_search=query,
             persons_page_number=page_num,
             persons_page_size=page_size,
         )
@@ -58,7 +59,8 @@ class PersonService:
         # сохраняем в кэш
         await self._put_persons_or_person_to_cache(
             persons_or_person=persons_list,
-            persons_page_nummer=page_num,
+            persons_search=query,
+            persons_page_number=page_num,
             persons_page_size=page_size,
         )
 
@@ -74,13 +76,14 @@ class PersonService:
     async def _person_or_persons_from_cache(
         self,
         person_id: Optional[str] = None,
+        person_search: Optional[str] = None,
         persons_page_number: Optional[int] = None,
         persons_page_size: Optional[int] = None,
     ) -> Optional[Union[PersonDetail, List[PersonDetail], None]]:
-        # если есть номер и размер страницы, отдаем список личностей
-        if persons_page_number:
+        # если есть поиск по полю, отдаем список личностей
+        if person_search:
             list_persons = await self.redis.get(
-                f"persons_{str(persons_page_number)}_{str(persons_page_size)}"
+                f"persons_{person_search}_{str(persons_page_number)}_{str(persons_page_size)}"
             )
             if list_persons:
                 persons_json = json.loads(list_persons)
@@ -97,14 +100,15 @@ class PersonService:
     async def _put_persons_or_person_to_cache(
         self,
         persons_or_person: Union[PersonDetail, List[PersonDetail]],
-        persons_page_nummer: Optional[int] = None,
+        persons_search: Union[str] = None,
+        persons_page_number: Optional[int] = None,
         persons_page_size: Optional[int] = None,
     ) -> None:
-        # если есть номер и размер страницы, сохраняем список личностей
-        if persons_page_nummer and persons_page_size:
+        # если есть поиск по полю, от отдаем список личностей
+        if persons_search:
             persons_json = json.dumps([person.dict() for person in persons_or_person])
             await self.redis.set(
-                f"persons_{str(persons_page_nummer)}_{str(persons_page_size)}",
+                f"persons_{persons_search}_{str(persons_page_number)}_{str(persons_page_size)}",
                 persons_json,
                 CACHE_EXPIRE_IN_SECONDS,
             )
