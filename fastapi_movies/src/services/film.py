@@ -20,19 +20,19 @@ class FilmService:
         self.elastic = elastic
         self._index = "movies"
 
-    # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
     async def get_by_id(self, film_id: str) -> Optional[Film]:
-        # Пытаемся получить данные из кеша, потому что оно работает быстрее
+        # если находим фильм в кэше, достаем от туда
         film = await self._film_or_films_from_cache(film_id=film_id)
-        if not film:
-            # Если фильма нет в кеше, то ищем его в Elasticsearch
-            film = await self._get_film_from_elastic(film_id)
-            if not film:
-                # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
-                return None
-            # Сохраняем фильм в кеш
-            await self._put_film_or_films_to_cache(films_or_film=film)
+        if film:
+            return film
 
+        # Если фильма нет в кеше, то ищем его в Elasticsearch
+        film = await self._get_film_from_elastic(film_id)
+        if not film:
+            # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
+            return None
+        # Сохраняем фильм в кеш
+        await self._put_film_or_films_to_cache(films_or_film=film)
         return film
 
     async def get_all_films(
@@ -49,20 +49,20 @@ class FilmService:
 
         # пытаемся найти фильмы в кэше
         list_films = await self._film_or_films_from_cache(films_page_num=page_num)
-
-        if not list_films:  # если в кэше нет, идем в эластик
-            films = await self.elastic.search(index=self._index, body=params)
-
-            hits_films = films["hits"]["hits"]
-
-            list_films = [Film(**film["_source"]) for film in hits_films]
-
-            # сохраняем в кэш по номеру страницы
-            await self._put_film_or_films_to_cache(
-                films_or_film=list_films, films_page_num=page_num
-            )
-
+        if list_films:
             return list_films
+
+        # если в кэше нет, идем в эластик
+        films = await self.elastic.search(index=self._index, body=params)
+
+        hits_films = films["hits"]["hits"]
+
+        list_films = [Film(**film["_source"]) for film in hits_films]
+
+        # сохраняем в кэш по номеру страницы
+        await self._put_film_or_films_to_cache(
+            films_or_film=list_films, films_page_num=page_num
+        )
 
         return list_films
 
@@ -80,20 +80,19 @@ class FilmService:
 
         # пытаемся найти фильмы в кэше
         list_films = await self._film_or_films_from_cache(films_page_num=page_num)
-
-        if not list_films:
-            films = await self.elastic.search(index=self._index, body=params)
-
-            hits_films = films["hits"]["hits"]
-
-            list_films = [Film(**film["_source"]) for film in hits_films]
-
-            # сохраняем в кэш по номеру страницы
-            await self._put_film_or_films_to_cache(
-                films_page_num=page_num, films_or_film=list_films
-            )
-
+        if list_films:
             return list_films
+
+        films = await self.elastic.search(index=self._index, body=params)
+
+        hits_films = films["hits"]["hits"]
+
+        list_films = [Film(**film["_source"]) for film in hits_films]
+
+        # сохраняем в кэш по номеру страницы
+        await self._put_film_or_films_to_cache(
+            films_page_num=page_num, films_or_film=list_films
+        )
 
         return list_films
 
