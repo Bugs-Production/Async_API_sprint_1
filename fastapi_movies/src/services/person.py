@@ -41,7 +41,8 @@ class PersonService:
 
         # находим личностей в кэше
         persons_list = await self._person_or_persons_from_cache(
-            persons_page_number=page_num
+            persons_page_number=page_num,
+            persons_page_size=page_size,
         )
         if persons_list:
             return persons_list
@@ -53,9 +54,12 @@ class PersonService:
 
         hits_persons = persons["hits"]["hits"]
         persons_list = [PersonDetail(**person["_source"]) for person in hits_persons]
+
+        # сохраняем в кэш
         await self._put_persons_or_person_to_cache(
             persons_or_person=persons_list,
             persons_page_nummer=page_num,
+            persons_page_size=page_size,
         )
 
         return persons_list
@@ -68,11 +72,16 @@ class PersonService:
         return PersonDetail(**(doc["_source"]))
 
     async def _person_or_persons_from_cache(
-        self, person_id: Optional[str] = None, persons_page_number: Optional[int] = None
+        self,
+        person_id: Optional[str] = None,
+        persons_page_number: Optional[int] = None,
+        persons_page_size: Optional[int] = None,
     ) -> Optional[Union[PersonDetail, List[PersonDetail], None]]:
-        # если есть номер страницы, отдаем список личностей
+        # если есть номер и размер страницы, отдаем список личностей
         if persons_page_number:
-            list_persons = await self.redis.get(f"persons_{str(persons_page_number)}")
+            list_persons = await self.redis.get(
+                f"persons_{str(persons_page_number)}_{str(persons_page_size)}"
+            )
             if list_persons:
                 persons_json = json.loads(list_persons)
                 return [PersonDetail.parse_obj(person) for person in persons_json]
@@ -89,12 +98,13 @@ class PersonService:
         self,
         persons_or_person: Union[PersonDetail, List[PersonDetail]],
         persons_page_nummer: Optional[int] = None,
+        persons_page_size: Optional[int] = None,
     ) -> None:
-        # если есть номер страницы, сохраняем список личностей
-        if persons_page_nummer:
+        # если есть номер и размер страницы, сохраняем список личностей
+        if persons_page_nummer and persons_page_size:
             persons_json = json.dumps([person.dict() for person in persons_or_person])
             await self.redis.set(
-                f"persons_{str(persons_page_nummer)}",
+                f"persons_{str(persons_page_nummer)}_{str(persons_page_size)}",
                 persons_json,
                 CACHE_EXPIRE_IN_SECONDS,
             )

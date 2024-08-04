@@ -26,9 +26,10 @@ class GenreService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
 
-        # пытаемся найти список жанров по номеру страницы
+        # пытаемся найти список жанров по номеру и размеру страницы
         genres_list = await self._genre_or_genres_from_cache(
-            genres_page_number=page_num
+            genres_page_number=page_num,
+            genres_page_size=page_size,
         )
         if genres_list:
             return genres_list
@@ -43,7 +44,9 @@ class GenreService:
 
         # сохраняем список жанров в кэш
         await self._put_genre_or_genres_to_cache(
-            genre_or_genres=genres_list, genres_page_number=page_num
+            genre_or_genres=genres_list,
+            genres_page_number=page_num,
+            genres_page_size=page_size,
         )
 
         return genres_list
@@ -74,10 +77,13 @@ class GenreService:
         self,
         genre_id: Optional[str] = None,
         genres_page_number: Optional[int] = None,
+        genres_page_size: Optional[int] = None,
     ) -> Optional[GenreDetail]:
-        # если есть номер страницы, возвращаем список жанров
-        if genres_page_number:
-            list_genres = await self.redis.get(f"genres_{str(genres_page_number)}")
+        # если есть номер страницы и ее размер, возвращаем список жанров
+        if genres_page_number and genres_page_size:
+            list_genres = await self.redis.get(
+                f"genres_{str(genres_page_number)}_{str(genres_page_size)}"
+            )
             if list_genres:
                 genres_json = json.loads(list_genres)
                 return [GenreDetail.parse_obj(genre) for genre in genres_json]
@@ -94,12 +100,13 @@ class GenreService:
         self,
         genre_or_genres: Union[GenreDetail, List[GenreDetail]],
         genres_page_number: Optional[int] = None,
+        genres_page_size: Optional[int] = None,
     ) -> None:
-        # если есть номер страницы сохраняем список жанров
-        if genres_page_number:
+        # если есть номер страницы и размер, сохраняем список жанров
+        if genres_page_number and genres_page_size:
             genres_json = json.dumps([genre.dict() for genre in genre_or_genres])
             await self.redis.set(
-                f"genres_{str(genres_page_number)}",
+                f"genres_{str(genres_page_number)}_{str(genres_page_size)}",
                 genres_json,
                 CACHE_EXPIRE_IN_SECONDS,
             )

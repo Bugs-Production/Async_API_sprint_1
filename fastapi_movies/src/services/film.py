@@ -48,7 +48,9 @@ class FilmService:
         params = {**sort_params, **genre_params, **offset_params}
 
         # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(films_page_num=page_num)
+        list_films = await self._film_or_films_from_cache(
+            films_page_num=page_num, films_page_size=page_size
+        )
         if list_films:
             return list_films
 
@@ -62,9 +64,11 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по номеру страницы
+        # сохраняем в кэш по номеру страницы и ее размеру
         await self._put_film_or_films_to_cache(
-            films_or_film=list_films, films_page_num=page_num
+            films_or_film=list_films,
+            films_page_num=page_num,
+            films_page_size=page_size,
         )
 
         return list_films
@@ -82,7 +86,9 @@ class FilmService:
         params = {**sort_params, **search_params, **offset_params}
 
         # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(films_page_num=page_num)
+        list_films = await self._film_or_films_from_cache(
+            films_page_num=page_num, films_page_size=page_size
+        )
         if list_films:
             return list_films
 
@@ -95,9 +101,11 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по номеру страницы
+        # сохраняем в кэш по номеру страницы и ее размеру
         await self._put_film_or_films_to_cache(
-            films_page_num=page_num, films_or_film=list_films
+            films_page_num=page_num,
+            films_or_film=list_films,
+            films_page_size=page_size,
         )
 
         return list_films
@@ -110,12 +118,17 @@ class FilmService:
         return Film(**doc["_source"])
 
     async def _film_or_films_from_cache(
-        self, film_id=None, films_page_num=None
+        self,
+        film_id: Union[str] = None,
+        films_page_num: Union[int] = None,
+        films_page_size: Union[int] = None,
     ) -> Optional[List[Film]]:
         if (
-            films_page_num
-        ):  # если есть номер страницы, отдаем список фильмов по странице
-            films_json = await self.redis.get(f"films_{str(films_page_num)}")
+            films_page_num and films_page_size
+        ):  # если есть номер страницы и размер, отдаем список фильмов по странице
+            films_json = await self.redis.get(
+                f"films_{str(films_page_num)}_{str(films_page_size)}"
+            )
             if films_json:
                 films_data = json.loads(films_json)
                 return [Film.parse_obj(film_data) for film_data in films_data]
@@ -135,12 +148,15 @@ class FilmService:
         self,
         films_or_film: Union[Film, List[Film]],
         films_page_num: Optional[int] = None,
+        films_page_size: Optional[int] = None,
     ) -> None:
-        # если есть номер страницы, сохраняем в кэш список фильмов
-        if films_page_num:
+        # если есть номер страницы и размер, сохраняем в кэш список фильмов
+        if films_page_num and films_page_size:
             films_json = json.dumps([f.dict() for f in films_or_film])
             await self.redis.set(
-                f"films_{str(films_page_num)}", films_json, CACHE_EXPIRE_IN_SECONDS
+                f"films_{str(films_page_num)}_{str(films_page_size)}",
+                films_json,
+                CACHE_EXPIRE_IN_SECONDS,
             )
         else:
             # иначе сохраняем один фильм
