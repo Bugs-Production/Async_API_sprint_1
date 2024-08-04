@@ -1,7 +1,7 @@
 import json
 import logging
 from functools import lru_cache
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -43,7 +43,9 @@ class PersonService:
         params = {**search_params, **offset_params}
 
         # находим личностей в кэше
-        persons_list = await self._person_or_persons_from_cache(person_page_number=page_num)
+        persons_list = await self._person_or_persons_from_cache(
+            person_page_number=page_num
+        )
         if persons_list:
             return persons_list
 
@@ -71,9 +73,7 @@ class PersonService:
         return PersonDetail(**(doc["_source"]))
 
     async def _person_or_persons_from_cache(
-            self,
-            person_id: Optional[str] = None,
-            person_page_number: Optional[int] = None
+        self, person_id: Optional[str] = None, person_page_number: Optional[int] = None
     ) -> Optional[Union[PersonDetail, List[PersonDetail], None]]:
         # если есть номер страницы, отдаем список личностей
         if person_page_number:
@@ -92,16 +92,22 @@ class PersonService:
         return person
 
     async def _put_persons_or_person_to_cache(
-            self,
-            persons_or_person: Union[PersonDetail, List[PersonDetail]],
-            persons_page_nummer: Optional[int] = None
+        self,
+        persons_or_person: Union[PersonDetail, List[PersonDetail]],
+        persons_page_nummer: Optional[int] = None,
     ) -> None:
         # если есть номер страницы, сохраняем список личностей
         if persons_page_nummer:
             persons_json = json.dumps([person.dict() for person in persons_or_person])
-            await self.redis.set(f"persons_{str(persons_page_nummer)}", persons_json, CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(
+                f"persons_{str(persons_page_nummer)}",
+                persons_json,
+                CACHE_EXPIRE_IN_SECONDS,
+            )
         else:
-            await self.redis.set(persons_or_person.id, persons_or_person.json(), CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(
+                persons_or_person.id, persons_or_person.json(), CACHE_EXPIRE_IN_SECONDS
+            )
 
 
 @lru_cache()

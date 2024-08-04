@@ -118,7 +118,9 @@ class FilmService:
     async def _film_or_films_from_cache(
         self, film_id=None, films_page_num=None
     ) -> Optional[List[Film]]:
-        if films_page_num:  # если есть номер страницы, отдаем список фильмов по странице
+        if (
+            films_page_num
+        ):  # если есть номер страницы, отдаем список фильмов по странице
             films_json = await self.redis.get(films_page_num)
             if films_json:
                 films_data = json.loads(films_json)
@@ -137,12 +139,16 @@ class FilmService:
         return film
 
     async def _put_film_or_films_to_cache(
-        self, films_or_film: Union[Film, List[Film]], films_page_num: Optional[int] = None
+        self,
+        films_or_film: Union[Film, List[Film]],
+        films_page_num: Optional[int] = None,
     ) -> None:
         # если есть номер страницы, сохраняем в кэш список фильмов
         if films_page_num:
             films_json = json.dumps([f.dict() for f in films_or_film])
-            await self.redis.set(f"films_{str(films_page_num)}", films_json, CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(
+                f"films_{str(films_page_num)}", films_json, CACHE_EXPIRE_IN_SECONDS
+            )
         else:
             # иначе сохраняем один фильм
             await self.redis.set(

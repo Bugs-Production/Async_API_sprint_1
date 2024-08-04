@@ -1,7 +1,7 @@
 import json
 import logging
 from functools import lru_cache
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -22,13 +22,17 @@ class GenreService:
         self.elastic = elastic
         self._index = "genres"
 
-    async def get_all_genres(self, page_num: int, page_size: int) -> Union[List[GenreDetail], None]:
+    async def get_all_genres(
+        self, page_num: int, page_size: int
+    ) -> Union[List[GenreDetail], None]:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
 
         # пытаемся найти список жанров по номеру страницы
-        genres_list = await self._genre_or_genres_from_cache(genres_page_number=page_num)
+        genres_list = await self._genre_or_genres_from_cache(
+            genres_page_number=page_num
+        )
         if genres_list:
             return genres_list
 
@@ -42,7 +46,9 @@ class GenreService:
         genres_list = [GenreDetail(**genre["_source"]) for genre in hits_genres]
 
         # сохраняем список жанров в кэш
-        await self._put_genre_or_genres_to_cache(genre_or_genres=genres_list, genres_page_number=page_num)
+        await self._put_genre_or_genres_to_cache(
+            genre_or_genres=genres_list, genres_page_number=page_num
+        )
 
         return genres_list
 
@@ -70,9 +76,9 @@ class GenreService:
         return GenreDetail(**doc["_source"])
 
     async def _genre_or_genres_from_cache(
-            self,
-            genre_id: Optional[str] = None,
-            genres_page_number: Optional[int] = None,
+        self,
+        genre_id: Optional[str] = None,
+        genres_page_number: Optional[int] = None,
     ) -> Optional[GenreDetail]:
         # если есть номер страницы, возвращаем список жанров
         if genres_page_number:
@@ -91,17 +97,25 @@ class GenreService:
         return genre
 
     async def _put_genre_or_genres_to_cache(
-            self,
-            genre_or_genres: Union[GenreDetail, List[GenreDetail]],
-            genres_page_number: Optional[int] = None,
+        self,
+        genre_or_genres: Union[GenreDetail, List[GenreDetail]],
+        genres_page_number: Optional[int] = None,
     ) -> None:
         # если есть номер страницы сохраняем список жанров
         if genres_page_number:
             genres_json = json.dumps([genre.dict() for genre in genre_or_genres])
-            await self.redis.set(f"genres_{str(genres_page_number)}", genres_json, CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(
+                f"genres_{str(genres_page_number)}",
+                genres_json,
+                CACHE_EXPIRE_IN_SECONDS,
+            )
         else:
             # иначе сохраняем один жанр
-            await self.redis.set(genre_or_genres.id, genre_or_genres.model_dump_json(), CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(
+                genre_or_genres.id,
+                genre_or_genres.model_dump_json(),
+                CACHE_EXPIRE_IN_SECONDS,
+            )
 
 
 @lru_cache()
