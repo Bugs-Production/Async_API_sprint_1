@@ -1,5 +1,6 @@
+import json
 from functools import lru_cache
-from typing import Optional
+from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -19,58 +20,103 @@ class GenreService:
         self._index = "genres"
 
     async def get_all_genres(
-            self, page_num: int, page_size: int
-    ) -> list[GenreDetail]:
+        self, page_num: int, page_size: int
+    ) -> Union[List[GenreDetail], None]:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
 
-        genres = await self.elastic.search(index=self._index, body=params)
+        # пытаемся найти список жанров по номеру и размеру страницы
+        genres_list = await self._genre_or_genres_from_cache(
+            genres_page_number=page_num,
+            genres_page_size=page_size,
+        )
+        if genres_list:
+            return genres_list
+
+        try:
+            genres = await self.elastic.search(index=self._index, body=params)
+        except NotFoundError:
+            return None
 
         hits_genres = genres["hits"]["hits"]
+        genres_list = [GenreDetail(**genre["_source"]) for genre in hits_genres]
 
-        return [GenreDetail(**genre["_source"]) for genre in hits_genres]
+        # сохраняем список жанров в кэш
+        await self._put_genre_or_genres_to_cache(
+            genre_or_genres=genres_list,
+            genres_page_number=page_num,
+            genres_page_size=page_size,
+        )
+
+        return genres_list
 
     async def get_by_id(self, genre_id: str) -> Optional[GenreDetail]:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
-        genre = await self._genre_from_cache(genre_id)
-        if not genre:
-            # Если жанра нет в кеше, то ищем его в Elasticsearch
-            genre = await self._get_genre_from_elastic(genre_id)
-            if not genre:
-                # Если отсутствует в Elasticsearch - жанра вообще нет в базе
-                return None
-            await self._put_genre_to_cache(genre)
+        genre = await self._genre_or_genres_from_cache(genre_id=genre_id)
+        if genre:
+            return genre
 
+        # Если жанра нет в кеше, то ищем его в Elasticsearch
+        genre = await self._get_genre_from_elastic(genre_id)
+        if not genre:
+            # Если отсутствует в Elasticsearch - жанра вообще нет в базе
+            return None
+
+        await self._put_genre_or_genres_to_cache(genre_or_genres=genre)
         return genre
 
-    async def _get_genre_from_elastic(
-            self, genre_id: str
-    ) -> Optional[GenreDetail]:
+    async def _get_genre_from_elastic(self, genre_id: str) -> Optional[GenreDetail]:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
             return None
         return GenreDetail(**doc["_source"])
 
-    async def _genre_from_cache(self, genre_id: str) -> Optional[GenreDetail]:
-        # Пытаемся получить данные о жанре из кеша, используя команду get
-        # https://redis.io/commands/get/
+    async def _genre_or_genres_from_cache(
+        self,
+        genre_id: Optional[str] = None,
+        genres_page_number: Optional[int] = None,
+        genres_page_size: Optional[int] = None,
+    ) -> Optional[GenreDetail]:
+        # если есть номер страницы и ее размер, возвращаем список жанров
+        if genres_page_number and genres_page_size:
+            list_genres = await self.redis.get(
+                f"genres_{str(genres_page_number)}_{str(genres_page_size)}"
+            )
+            if list_genres:
+                genres_json = json.loads(list_genres)
+                return [GenreDetail.parse_obj(genre) for genre in genres_json]
+            return None
+
+        # иначе возвращаем один жанр
         data = await self.redis.get(genre_id)
         if not data:
             return None
 
-        genre = GenreDetail.parse_raw(data)
-        return genre
+        return GenreDetail.parse_raw(data)
 
-    async def _put_genre_to_cache(self, genre: GenreDetail):
-        # Сохраняем данные о фильме, используя команду set
-        # Выставляем время жизни кеша — 5 минут
-        # https://redis.io/commands/set/
-        # pydantic позволяет сериализовать модель в json
-        await self.redis.set(
-            genre.id, genre.model_dump_json(), CACHE_EXPIRE_IN_SECONDS
-        )
+    async def _put_genre_or_genres_to_cache(
+        self,
+        genre_or_genres: Union[GenreDetail, List[GenreDetail]],
+        genres_page_number: Optional[int] = None,
+        genres_page_size: Optional[int] = None,
+    ) -> None:
+        # если есть номер страницы и размер, сохраняем список жанров
+        if genres_page_number and genres_page_size:
+            genres_json = json.dumps([genre.dict() for genre in genre_or_genres])
+            await self.redis.set(
+                f"genres_{str(genres_page_number)}_{str(genres_page_size)}",
+                genres_json,
+                CACHE_EXPIRE_IN_SECONDS,
+            )
+        else:
+            # иначе сохраняем один жанр
+            await self.redis.set(
+                genre_or_genres.id,
+                genre_or_genres.model_dump_json(),
+                CACHE_EXPIRE_IN_SECONDS,
+            )
 
 
 @lru_cache()

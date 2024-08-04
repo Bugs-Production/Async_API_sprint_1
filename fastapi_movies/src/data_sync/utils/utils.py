@@ -21,10 +21,7 @@ def create_elastic_objects_list(
 
     return (
         [
-            ElasticObject(
-                id=_object.split(": ")[0],
-                name=_object.split(": ")[1]
-            )
+            ElasticObject(id=_object.split(": ")[0], name=_object.split(": ")[1])
             for _object in objects_list
         ]
         if objects_list is not None
