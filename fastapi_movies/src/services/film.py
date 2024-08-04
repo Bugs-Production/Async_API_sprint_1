@@ -48,7 +48,7 @@ class FilmService:
         params = {**sort_params, **genre_params, **offset_params}
 
         # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(page_num=page_num)
+        list_films = await self._film_or_films_from_cache(films_page_num=page_num)
 
         if not list_films:  # если в кэше нет, идем в эластик
             films = await self.elastic.search(index=self._index, body=params)
@@ -59,7 +59,7 @@ class FilmService:
 
             # сохраняем в кэш по номеру страницы
             await self._put_film_or_films_to_cache(
-                films_or_film=list_films, page_num=page_num
+                films_or_film=list_films, films_page_num=page_num
             )
 
             return list_films
@@ -79,7 +79,7 @@ class FilmService:
         params = {**sort_params, **search_params, **offset_params}
 
         # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(page_num=page_num)
+        list_films = await self._film_or_films_from_cache(films_page_num=page_num)
 
         if not list_films:
             films = await self.elastic.search(index=self._index, body=params)
@@ -90,7 +90,7 @@ class FilmService:
 
             # сохраняем в кэш по номеру страницы
             await self._put_film_or_films_to_cache(
-                page_num=page_num, films_or_film=list_films
+                films_page_num=page_num, films_or_film=list_films
             )
 
             return list_films
@@ -105,39 +105,38 @@ class FilmService:
         return Film(**doc["_source"])
 
     async def _film_or_films_from_cache(
-        self, film_id=None, page_num=None
+        self, film_id=None, films_page_num=None
     ) -> Optional[List[Film]]:
-        # Пытаемся получить данные о фильме из кеша, используя команду get
-        # https://redis.io/commands/get/
-        if (
-            not page_num
-        ):  # если нет номера страницы, значит будет возвращаться один фильм
-            data = await self.redis.get(film_id)
-            if not data:
-                return None
+        if films_page_num:  # если есть номер страницы, отдаем список фильмов по странице
+            films_json = await self.redis.get(films_page_num)
+            if films_json:
+                films_data = json.loads(films_json)
+                return [Film.parse_obj(film_data) for film_data in films_data]
+            return None
 
-            film = Film.parse_raw(data)
-            return film
+        # иначе же находим один фильм по id
+        data = await self.redis.get(film_id)
 
-        # иначе же отдаем список фильмов по номеру страницы
-        films_json = await self.redis.get(page_num)
-        if films_json:
-            films_data = json.loads(films_json)
-            return [Film.parse_obj(film_data) for film_data in films_data]
-        return None
+        # если в кэше нет такого фильма отдаем None
+        if not data:
+            return None
+
+        # возвращаем фильм
+        film = Film.parse_raw(data)
+        return film
 
     async def _put_film_or_films_to_cache(
-        self, films_or_film: Union[Film, List[Film]], page_num: Optional[int] = None
+        self, films_or_film: Union[Film, List[Film]], films_page_num: Optional[int] = None
     ) -> None:
-        # если нет номера страницы, сохраняем в кэш один фильм
-        if not page_num:
+        # если есть номер страницы, сохраняем в кэш список фильмов
+        if films_page_num:
+            films_json = json.dumps([f.dict() for f in films_or_film])
+            await self.redis.set(films_page_num, films_json, CACHE_EXPIRE_IN_SECONDS)
+        else:
+            # иначе сохраняем один фильм
             await self.redis.set(
                 films_or_film.id, films_or_film.json(), CACHE_EXPIRE_IN_SECONDS
             )
-        else:
-            # иначе сохраняем список фильмов
-            films_json = json.dumps([f.dict() for f in films_or_film])
-            await self.redis.set(page_num, films_json, CACHE_EXPIRE_IN_SECONDS)
 
 
 @lru_cache()
