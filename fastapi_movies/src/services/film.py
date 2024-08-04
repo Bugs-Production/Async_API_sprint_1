@@ -1,4 +1,5 @@
 import json
+import logging
 from functools import lru_cache
 from typing import List, Optional, Union
 
@@ -12,6 +13,8 @@ from models.models import Film
 
 from .utils import (CACHE_EXPIRE_IN_SECONDS, get_genre_filter_params,
                     get_offset_params, get_search_params, get_sort_params)
+
+logger = logging.getLogger(__name__)
 
 
 class FilmService:
@@ -53,7 +56,11 @@ class FilmService:
             return list_films
 
         # если в кэше нет, идем в эластик
-        films = await self.elastic.search(index=self._index, body=params)
+        try:
+            films = await self.elastic.search(index=self._index, body=params)
+        except NotFoundError:
+            logger.info("ElasticSearch connect error")
+            return None
 
         hits_films = films["hits"]["hits"]
 
@@ -83,7 +90,11 @@ class FilmService:
         if list_films:
             return list_films
 
-        films = await self.elastic.search(index=self._index, body=params)
+        try:
+            films = await self.elastic.search(index=self._index, body=params)
+        except NotFoundError:
+            logger.info("ElasticSearch connect error")
+            return None
 
         hits_films = films["hits"]["hits"]
 
@@ -100,6 +111,7 @@ class FilmService:
         try:
             doc = await self.elastic.get(index=self._index, id=film_id)
         except NotFoundError:
+            logger.info("ElasticSearch connect error")
             return None
         return Film(**doc["_source"])
 

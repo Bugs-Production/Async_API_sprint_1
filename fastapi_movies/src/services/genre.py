@@ -1,4 +1,5 @@
 import json
+import logging
 from functools import lru_cache
 from typing import Optional, List, Union
 
@@ -12,6 +13,8 @@ from models.models import GenreDetail
 
 from .utils import CACHE_EXPIRE_IN_SECONDS, get_offset_params
 
+logger = logging.getLogger(__name__)
+
 
 class GenreService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
@@ -19,7 +22,7 @@ class GenreService:
         self.elastic = elastic
         self._index = "genres"
 
-    async def get_all_genres(self, page_num: int, page_size: int) -> list[GenreDetail]:
+    async def get_all_genres(self, page_num: int, page_size: int) -> Union[List[GenreDetail], None]:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
@@ -29,7 +32,11 @@ class GenreService:
         if genres_list:
             return genres_list
 
-        genres = await self.elastic.search(index=self._index, body=params)
+        try:
+            genres = await self.elastic.search(index=self._index, body=params)
+        except NotFoundError:
+            logger.info("ElasticSearch connect error")
+            return None
 
         hits_genres = genres["hits"]["hits"]
         genres_list = [GenreDetail(**genre["_source"]) for genre in hits_genres]
@@ -58,6 +65,7 @@ class GenreService:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
+            logger.info("ElasticSearch connect error")
             return None
         return GenreDetail(**doc["_source"])
 

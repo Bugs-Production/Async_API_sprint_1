@@ -1,4 +1,5 @@
 import json
+import logging
 from functools import lru_cache
 from typing import Optional, List, Union
 
@@ -12,6 +13,8 @@ from models.models import PersonDetail
 
 from .utils import (CACHE_EXPIRE_IN_SECONDS, get_offset_params,
                     get_search_params)
+
+logger = logging.getLogger(__name__)
 
 
 class PersonService:
@@ -47,6 +50,7 @@ class PersonService:
         try:
             persons = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
+            logger.info("ElasticSearch connect error")
             return None
 
         hits_persons = persons["hits"]["hits"]
@@ -62,6 +66,7 @@ class PersonService:
         try:
             doc = await self.elastic.get(index=self._index, id=person_id)
         except NotFoundError:
+            logger.info("ElasticSearch connect error")
             return None
         return PersonDetail(**(doc["_source"]))
 
