@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import psycopg
 from dto.extractors import PostgresExtractor
@@ -17,7 +17,7 @@ class Postgres:
         self.conn = conn
 
     @backoff()
-    def execute(self, sql_path, params: Dict[str, Any]) -> List[dict]:
+    def execute(self, sql_path, params: dict[str, Any]) -> list[dict]:
         with self.conn.cursor() as cursor:
             with open(sql_path, "rb") as f:
                 query = f.read()
@@ -28,7 +28,7 @@ class Postgres:
 
 class ElasticLoader:
     @staticmethod
-    def load(client: Elasticsearch, index, objects: List[BaseModel]) -> Dict:
+    def load(client: Elasticsearch, index, objects: list[BaseModel]) -> dict:
         """Осуществляет балковую загрузку данных в Эластик."""
         body = []
         for _object in objects:
