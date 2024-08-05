@@ -1,6 +1,7 @@
 import os
 from logging import config as logging_config
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from core.logger import LOGGING
@@ -12,11 +13,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    project_name: str = "movies"
-    redis_host: str = "127.0.0.1"
-    redis_port: int = 6379
-    elastic_host: str = "127.0.0.1"
-    elastic_port: int = 9200
+    project_name: str = Field("movies", alias="PROJECT_NAME")
+    redis_host: str = Field("127.0.0.1", alias="REDIS_HOST")
+    redis_port: int = Field(6379, alias="REDIS_PORT")
+    elastic_host: str = Field("127.0.0.1:9200", alias="ELASTIC_HOST")
     base_dir: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
