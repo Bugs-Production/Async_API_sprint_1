@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from dto.models import ElasticObject
 
@@ -11,7 +10,7 @@ def get_time(timestring):
 
 def create_elastic_objects_list(
     objects_list: list[str],
-) -> Optional[List[ElasticObject]]:
+) -> list[ElasticObject] | None:
     """
     Приводит данные из постгреса в формате ["id: name", ...] к списку объектов
     эластика
