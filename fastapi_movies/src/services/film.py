@@ -1,6 +1,5 @@
 import json
 from functools import lru_cache
-from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -21,7 +20,7 @@ class FilmService:
         self.elastic = elastic
         self._index = "movies"
 
-    async def get_by_id(self, film_id: str) -> Optional[Film]:
+    async def get_by_id(self, film_id: str) -> Film | None:
         # если находим фильм в кэше, достаем от туда
         film = await self._film_or_films_from_cache(film_id=film_id)
         if film:
@@ -121,7 +120,7 @@ class FilmService:
 
         return list_films
 
-    async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
+    async def _get_film_from_elastic(self, film_id: str) -> Film | None:
         try:
             doc = await self.elastic.get(index=self._index, id=film_id)
         except NotFoundError:
@@ -130,13 +129,13 @@ class FilmService:
 
     async def _film_or_films_from_cache(
         self,
-        film_id: Union[str] = None,
-        films_page_num: Union[int] = None,
-        films_page_size: Union[int] = None,
-        films_sort: Optional[str] = None,
-        films_genre: Optional[str] = None,
-        films_search: Optional[str] = None,
-    ) -> Optional[List[Film]]:
+        film_id: str | None = None,
+        films_page_num: int | None = None,
+        films_page_size: int | None = None,
+        films_sort: str | None = None,
+        films_genre: str | None = None,
+        films_search: str | None = None,
+    ) -> list[Film] | None:
         if (
             films_page_num and films_page_size
         ):  # если есть номер страницы и размер, отдаем список фильмов по странице
@@ -167,12 +166,12 @@ class FilmService:
 
     async def _put_film_or_films_to_cache(
         self,
-        films_or_film: Union[Film, List[Film]],
-        films_page_num: Optional[int] = None,
-        films_page_size: Optional[int] = None,
-        films_sort: Optional[str] = None,
-        films_genre: Optional[str] = None,
-        films_search: Optional[str] = None,
+        films_or_film: Film | list[Film],
+        films_page_num: int | None = None,
+        films_page_size: int | None = None,
+        films_sort: str | None = None,
+        films_genre: str | None = None,
+        films_search: str | None = None,
     ) -> None:
         # Если указаны номер страницы и размер страницы, сохраняем список фильмов
         if films_page_num and films_page_size:

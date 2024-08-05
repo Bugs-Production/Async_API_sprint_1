@@ -1,6 +1,5 @@
 import json
 from functools import lru_cache
-from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -20,7 +19,7 @@ class PersonService:
         self.elastic = elastic
         self._index = "persons"
 
-    async def get_by_id(self, person_id: str) -> Optional[PersonDetail]:
+    async def get_by_id(self, person_id: str) -> PersonDetail | None:
         person = await self._person_or_persons_from_cache(person_id)
         if not person:
             person = await self._get_person_from_elastic(person_id)
@@ -66,7 +65,7 @@ class PersonService:
 
         return persons_list
 
-    async def _get_person_from_elastic(self, person_id: str) -> Optional[PersonDetail]:
+    async def _get_person_from_elastic(self, person_id: str) -> PersonDetail | None:
         try:
             doc = await self.elastic.get(index=self._index, id=person_id)
         except NotFoundError:
@@ -75,11 +74,11 @@ class PersonService:
 
     async def _person_or_persons_from_cache(
         self,
-        person_id: Optional[str] = None,
-        person_search: Optional[str] = None,
-        persons_page_number: Optional[int] = None,
-        persons_page_size: Optional[int] = None,
-    ) -> Optional[Union[PersonDetail, List[PersonDetail], None]]:
+        person_id: str | None = None,
+        person_search: str | None = None,
+        persons_page_number: int | None = None,
+        persons_page_size: int | None = None,
+    ) -> PersonDetail | list[PersonDetail] | None:
         # если есть поиск по полю, отдаем список личностей
         if person_search:
             list_persons = await self.redis.get(
@@ -99,10 +98,10 @@ class PersonService:
 
     async def _put_persons_or_person_to_cache(
         self,
-        persons_or_person: Union[PersonDetail, List[PersonDetail]],
-        persons_search: Union[str] = None,
-        persons_page_number: Optional[int] = None,
-        persons_page_size: Optional[int] = None,
+        persons_or_person: PersonDetail | list[PersonDetail],
+        persons_search: str | None = None,
+        persons_page_number: int | None = None,
+        persons_page_size: int | None = None,
     ) -> None:
         # если есть поиск по полю, от отдаем список личностей
         if persons_search:

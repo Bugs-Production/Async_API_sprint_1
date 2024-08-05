@@ -1,6 +1,5 @@
 import json
 from functools import lru_cache
-from typing import List, Optional, Union
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
@@ -21,7 +20,7 @@ class GenreService:
 
     async def get_all_genres(
         self, page_num: int, page_size: int
-    ) -> Union[List[GenreDetail], None]:
+    ) -> list[GenreDetail] | None:
         query = {"query": {"match_all": {}}}
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
@@ -51,7 +50,7 @@ class GenreService:
 
         return genres_list
 
-    async def get_by_id(self, genre_id: str) -> Optional[GenreDetail]:
+    async def get_by_id(self, genre_id: str) -> GenreDetail | None:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         genre = await self._genre_or_genres_from_cache(genre_id=genre_id)
         if genre:
@@ -66,7 +65,7 @@ class GenreService:
         await self._put_genre_or_genres_to_cache(genre_or_genres=genre)
         return genre
 
-    async def _get_genre_from_elastic(self, genre_id: str) -> Optional[GenreDetail]:
+    async def _get_genre_from_elastic(self, genre_id: str) -> GenreDetail | None:
         try:
             doc = await self.elastic.get(index=self._index, id=genre_id)
         except NotFoundError:
@@ -75,10 +74,10 @@ class GenreService:
 
     async def _genre_or_genres_from_cache(
         self,
-        genre_id: Optional[str] = None,
-        genres_page_number: Optional[int] = None,
-        genres_page_size: Optional[int] = None,
-    ) -> Optional[GenreDetail]:
+        genre_id: str | None = None,
+        genres_page_number: int | None = None,
+        genres_page_size: int | None = None,
+    ) -> GenreDetail | None:
         # если есть номер страницы и ее размер, возвращаем список жанров
         if genres_page_number and genres_page_size:
             list_genres = await self.redis.get(
@@ -98,9 +97,9 @@ class GenreService:
 
     async def _put_genre_or_genres_to_cache(
         self,
-        genre_or_genres: Union[GenreDetail, List[GenreDetail]],
-        genres_page_number: Optional[int] = None,
-        genres_page_size: Optional[int] = None,
+        genre_or_genres: GenreDetail | list[GenreDetail],
+        genres_page_number: int | None = None,
+        genres_page_size: int | None = None,
     ) -> None:
         # если есть номер страницы и размер, сохраняем список жанров
         if genres_page_number and genres_page_size:

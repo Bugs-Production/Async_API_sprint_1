@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,10 +13,10 @@ class PostgresFilmWork(BaseModel):
     type: str
     created: datetime
     modified: datetime
-    genres: List[str] | None = None
-    actors: List[str] | None = None
-    directors: List[str] | None = None
-    writers: List[str] | None = None
+    genres: list[str] | None = None
+    actors: list[str] | None = None
+    directors: list[str] | None = None
+    writers: list[str] | None = None
 
 
 class ElasticObject(BaseModel):
@@ -27,15 +27,15 @@ class ElasticObject(BaseModel):
 class ElasticFilmWork(BaseModel):
     id: str
     imdb_rating: float | None = None
-    genres: List[Dict[str, Any]] | None = None
+    genres: list[dict[str, Any]] | None = None
     title: str
     description: str | None = None
-    directors_names: List[str] | None = None
-    actors_names: List[str] | None = None
-    writers_names: List[str] | None = None
-    directors: List[Dict[str, Any]] | None = None
-    actors: List[Dict[str, Any]] | None = None
-    writers: List[Dict[str, Any]] | None = None
+    directors_names: list[str] | None = None
+    actors_names: list[str] | None = None
+    writers_names: list[str] | None = None
+    directors: list[dict[str, Any]] | None = None
+    actors: list[dict[str, Any]] | None = None
+    writers: list[dict[str, Any]] | None = None
 
 
 class PostgresGenre(BaseModel):
@@ -56,7 +56,7 @@ class ElasticGenre(BaseModel):
 
 class PostgresPersonFilmwork(BaseModel):
     id: UUID
-    roles: List
+    roles: list
     title: str
     rating: float | None = None
 
@@ -65,10 +65,10 @@ class PostgresPerson(BaseModel):
     id: UUID
     full_name: str
     modified: datetime
-    films: List[dict] | None = None
+    films: list[dict] | None = None
 
 
 class ElasticPerson(BaseModel):
     id: str
     full_name: str
-    films: List[Dict[str, Any]] | None = None
+    films: list[dict[str, Any]] | None = None
