@@ -10,7 +10,14 @@ from .api_models import GenreDetail
 router = APIRouter()
 
 
-@router.get("/", response_model=list[GenreDetail])
+@router.get(
+    "/",
+    response_model=list[GenreDetail],
+    summary="Все жанры",
+    description="Возвращает список всех жанров с поддержкой пагинации. "
+    "Пользователь может указать размер страницы для "
+    "получения результатов.",
+)
 async def genres(
     paginator: Paginator = Depends(Paginator),
     genre_service: GenreService = Depends(get_genre_service),
@@ -25,7 +32,13 @@ async def genres(
     return [GenreDetail(**genre.model_dump()) for genre in all_genres]
 
 
-@router.get("/{genre_id}", response_model=GenreDetail)
+@router.get(
+    "/{genre_id}",
+    response_model=GenreDetail,
+    summary="Поиск жанра по UUID",
+    description="Возвращает подробную информацию о жанре по его уникальному идентификатору (UUID)."
+    " Если жанр не найден, возвращается ошибка 404.",
+)
 async def genre_details(
     genre_id: str, genre_service: GenreService = Depends(get_genre_service)
 ) -> GenreDetail:

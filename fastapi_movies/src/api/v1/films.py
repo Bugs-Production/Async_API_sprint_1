@@ -10,7 +10,14 @@ from .api_models import Film, FilmDetail
 router = APIRouter()
 
 
-@router.get("/search", response_model=list[Film])
+@router.get(
+    "/search",
+    response_model=list[Film],
+    summary="Поиск фильмов по названию",
+    description="Эндпоинт для поиска фильмов по заданному названию."
+    " Пользователь может указать параметры сортировки (по популярности), номер страницы "
+    "и количество фильмов на странице для получения результатов.",
+)
 async def film_search(
     query: str,
     sort: str = "-imdb_rating",
@@ -31,7 +38,13 @@ async def film_search(
     return [Film(**film.dict()) for film in searched_films]
 
 
-@router.get("/", response_model=list[Film])
+@router.get(
+    "/",
+    response_model=list[Film],
+    summary="Все фильмы",
+    description="Возвращает список всех фильмов с поддержкой пагинации, фильтрации по жанру и рейтингу фильмов. "
+    "Пользователь может указать размер страницы для получения результатов.",
+)
 async def films(
     sort: str | None = "-imdb_rating",
     genre: str | None = None,
@@ -55,7 +68,14 @@ async def films(
     return [Film(**film.dict()) for film in all_films]
 
 
-@router.get("/{film_id}", response_model=FilmDetail)
+@router.get(
+    "/{film_id}",
+    response_model=FilmDetail,
+    summary="Поиск фильма по UUID",
+    description="Возвращает подробную информацию о фильме"
+    " по его уникальному идентификатору (UUID)."
+    " Если фильм не найден, возвращается ошибка 404.",
+)
 async def film_details(
     film_id: str, film_service: FilmService = Depends(get_film_service)
 ) -> FilmDetail:
