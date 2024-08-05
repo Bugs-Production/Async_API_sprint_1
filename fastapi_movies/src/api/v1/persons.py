@@ -10,7 +10,14 @@ from .api_models import Film, PersonDetail
 router = APIRouter()
 
 
-@router.get("/search", response_model=list[PersonDetail])
+@router.get(
+    "/search",
+    response_model=list[PersonDetail],
+    summary="Поиск личности по имени",
+    description="Позволяет искать личностей по имени с возможностью пагинации "
+    "и количество результатов на странице. "
+    "Если личности не найдены, возвращается ошибка 404.",
+)
 async def person_search(
     query: str,
     paginator: Paginator = Depends(Paginator),
@@ -31,7 +38,14 @@ async def person_search(
     return [PersonDetail(**person.dict()) for person in searched_persons]
 
 
-@router.get("/{person_id}", response_model=PersonDetail)
+@router.get(
+    "/{person_id}",
+    response_model=PersonDetail,
+    summary="Поиск личности по UUID",
+    description="Возвращает подробную информацию о личности по"
+    " её уникальному идентификатору (UUID). "
+    "Если личность не найдена, возвращается ошибка 404.",
+)
 async def person_details(
     person_id: str, person_service: PersonService = Depends(get_person_service)
 ) -> PersonDetail:
@@ -43,7 +57,14 @@ async def person_details(
     return PersonDetail(**person.dict())
 
 
-@router.get("/{person_id}/film", response_model=list[Film])
+@router.get(
+    "/{person_id}/film",
+    response_model=list[Film],
+    summary="Фильмы с участием личности по UUID",
+    description="Возвращает список фильмов, в которых участвовала личность,"
+    " по её уникальному идентификатору (UUID)."
+    " Если личность или фильмы с её участием не найдены, возвращается ошибка 404.",
+)
 async def person_films(
     person_id: str, person_service: PersonService = Depends(get_person_service)
 ) -> list[Film]:
