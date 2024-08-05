@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     redis_host: str = Field("127.0.0.1", alias="REDIS_HOST")
     redis_port: int = Field(6379, alias="REDIS_PORT")
     elastic_host: str = Field("127.0.0.1:9200", alias="ELASTIC_HOST")
-    base_dir: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 settings = Settings()
