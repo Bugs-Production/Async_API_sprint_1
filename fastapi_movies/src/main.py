@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -7,24 +9,27 @@ from api.v1 import films, genres, persons
 from core.config import settings as config
 from db import elastic, redis
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    try:
+        redis.redis = Redis(host=config.redis_host, port=config.redis_port)
+        elastic.es = AsyncElasticsearch(hosts=[config.elastic_host])
+        yield
+    finally:
+        # shutdown
+        await redis.redis.close()
+        await elastic.es.close()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title=config.project_name,
     docs_url="/api/openapi",
     openapi_url="/api/openapi.json",
     default_response_class=ORJSONResponse,
 )
-
-
-@app.on_event("startup")
-async def startup():
-    redis.redis = Redis(host=config.redis_host, port=config.redis_port)
-    elastic.es = AsyncElasticsearch(hosts=[config.elastic_host])
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    await redis.redis.close()
-    await elastic.es.close()
 
 
 # Подключаем роутер к серверу, указав префикс /v1/films
