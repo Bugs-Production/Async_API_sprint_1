@@ -4,7 +4,7 @@ from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
                                     PERSONS_MAPPING)
 from dto.extractors import (FilmsPostgresExtractor, GenresPostgresExtractor,
                             PersonsPostgresExtractor)
-from dto.loaders import ElasticLoadManager, ElasticTask, Postgres
+from dto.loaders import ElasticLoadManager, ElasticTask, PostgresDb
 from dto.transformers import (FilmsElasticTransformer,
                               GenresElasticTransformer,
                               PersonsElasticTransformer)
@@ -55,8 +55,8 @@ def main():
     with psycopg.connect(
         **dsl, row_factory=dict_row, cursor_factory=ClientCursor
     ) as pg_conn:
-        pg = Postgres(pg_conn)
-        manager = ElasticLoadManager(pg=pg, elastic=elastic, state=state)
+        pg = PostgresDb(pg_conn)
+        manager = ElasticLoadManager(db=pg, elastic=elastic, state=state)
         film_work_task = ElasticTask(
             state_key=FILM_WORK_STATE_KEY,
             elastic_index=MOVIES_INDEX,

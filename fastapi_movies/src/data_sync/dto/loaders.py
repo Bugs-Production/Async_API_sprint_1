@@ -13,15 +13,26 @@ from utils.decorators import backoff
 from utils.logger import logger
 
 
-class Postgres:
+class Database(ABC):
+    @abstractmethod
+    def execute(self, query, params: dict[str, Any]) -> list[dict]: ...
+
+    @abstractmethod
+    def get_query(self, path) -> Any: ...
+
+
+class PostgresDb(Database):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
 
+    def get_query(self, path):
+        with open(path, "rb") as f:
+            query = f.read()
+        return query
+
     @backoff()
-    def execute(self, sql_path, params: dict[str, Any]) -> list[dict]:
+    def execute(self, query, params: dict[str, Any]) -> list[dict]:
         with self.conn.cursor() as cursor:
-            with open(sql_path, "rb") as f:
-                query = f.read()
             cursor.execute(query, params)
             rows = cursor.fetchmany(PG_FETCH_SIZE)
             return rows
@@ -86,7 +97,7 @@ class LoadManager(ABC):
 
 
 class ElasticLoadManager(LoadManager):
-    def __init__(self, pg: Postgres, elastic: Elasticsearch, state: State):
+    def __init__(self, db: Database, elastic: Elasticsearch, state: State):
         """
         Класс менеджер, отвечающий за непосредственную загрузку данных
         в эластик
@@ -95,7 +106,7 @@ class ElasticLoadManager(LoadManager):
         :param state: объект хранилища, которые отвечает за получение последней
         сохраненной в эластик записи и записи свежих значений
         """
-        self.pg = pg
+        self.db = db
         self.elastic = elastic
         self.state = state
         self.last_modified_obj = None
@@ -117,8 +128,9 @@ class ElasticLoadManager(LoadManager):
     def load(self):
         for task in self.tasks:
             self.last_modified_obj = self.state.get_state(task.state_key, dt.min)
-            while pg_data := self.pg.execute(
-                sql_path=task.sql_path, params={"dttm": self.last_modified_obj}
+            query = self.db.get_query(task.sql_path)
+            while pg_data := self.db.execute(
+                query=query, params={"dttm": self.last_modified_obj}
             ):
                 el_objects, tmp_last_obj_modified = self._create_el_objects(
                     task, pg_data
