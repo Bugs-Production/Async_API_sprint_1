@@ -1,8 +1,9 @@
-from datetime import datetime
+from abc import ABC, abstractmethod
+from datetime import datetime as dt
 from typing import Any
 
 import psycopg
-from dto.extractors import PostgresExtractor
+from dto.extractors import DataExtractor
 from dto.transformers import ElasticTransformer
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
@@ -46,12 +47,12 @@ class ElasticLoader:
         return res
 
 
-class Task:
+class ElasticTask:
     def __init__(
         self,
         state_key: str,
         elastic_index: str,
-        extractor: PostgresExtractor,
+        extractor: DataExtractor,
         el_transformer: ElasticTransformer,
         sql_path: str,
     ):
@@ -74,7 +75,17 @@ class Task:
         self.sql_path = sql_path
 
 
-class LoadManager:
+class LoadManager(ABC):
+    """
+    Класс, отвечающий за загрузку данных в какую-либо систему
+    """
+
+    @abstractmethod
+    def load(self):
+        pass
+
+
+class ElasticLoadManager(LoadManager):
     def __init__(self, pg: Postgres, elastic: Elasticsearch, state: State):
         """
         Класс менеджер, отвечающий за непосредственную загрузку данных
@@ -87,22 +98,36 @@ class LoadManager:
         self.pg = pg
         self.elastic = elastic
         self.state = state
+        self.last_modified_obj = None
+        self.tasks = []
 
-    def load_to_elastic(self, task: Task):
-        last_modified_obj = self.state.get_state(task.state_key, datetime.min)
-        while pg_data := self.pg.execute(
-            sql_path=task.sql_path, params={"dttm": last_modified_obj}
-        ):
-            elastic_objects = []
-            tmp_last_obj_modified = last_modified_obj
-            for obj in pg_data:
-                pg_obj = task.extractor.extract(obj)
-                elastic_obj = task.el_transformer.transform(pg_obj)
-                elastic_objects.append(elastic_obj)
-                tmp_last_obj_modified = pg_obj.modified
-            res = ElasticLoader.load(self.elastic, task.elastic_index, elastic_objects)
-            if res.get("errors", True):
-                logger.error("Elastic loader have a error!")
-                break
-            last_modified_obj = tmp_last_obj_modified
-            self.state.save_state(task.state_key, str(last_modified_obj))
+    def _create_el_objects(self, task: ElasticTask, pg_data: list[dict]):
+        elastic_objects = []
+        tmp_last_obj_modified = self.last_modified_obj
+        for obj in pg_data:
+            pg_obj = task.extractor.extract(obj)
+            elastic_obj = task.el_transformer.transform(pg_obj)
+            elastic_objects.append(elastic_obj)
+            tmp_last_obj_modified = pg_obj.modified
+        return elastic_objects, tmp_last_obj_modified
+
+    def add_task(self, task: ElasticTask):
+        self.tasks.append(task)
+
+    def load(self):
+        for task in self.tasks:
+            self.last_modified_obj = self.state.get_state(task.state_key, dt.min)
+            while pg_data := self.pg.execute(
+                sql_path=task.sql_path, params={"dttm": self.last_modified_obj}
+            ):
+                el_objects, tmp_last_obj_modified = self._create_el_objects(
+                    task, pg_data
+                )
+                res = ElasticLoader.load(
+                    self.elastic, task.elastic_index, el_objects
+                )
+                if res.get("errors", True):
+                    logger.error("Elastic loader have a error!")
+                    break
+                self.last_modified_obj = tmp_last_obj_modified
+                self.state.save_state(task.state_key, str(self.last_modified_obj))
