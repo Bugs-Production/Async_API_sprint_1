@@ -3,15 +3,15 @@ from abc import ABC, abstractmethod
 from dto.models import PostgresFilmWork, PostgresGenre, PostgresPerson
 
 
-class PostgresExtractor(ABC):
+class DataExtractor(ABC):
     @staticmethod
     @abstractmethod
     def extract(data: dict):
-        """Валидирует данные, пришедшие из Postgres."""
+        """Валидирует данные, пришедшие из БД."""
         pass
 
 
-class FilmsPostgresExtractor(PostgresExtractor):
+class FilmsPostgresExtractor(DataExtractor):
     @staticmethod
     def extract(data: dict) -> PostgresFilmWork:
         film_work = PostgresFilmWork(
@@ -30,7 +30,7 @@ class FilmsPostgresExtractor(PostgresExtractor):
         return film_work
 
 
-class GenresPostgresExtractor(PostgresExtractor):
+class GenresPostgresExtractor(DataExtractor):
     @staticmethod
     def extract(data: dict) -> PostgresGenre:
         genre = PostgresGenre(
@@ -43,7 +43,7 @@ class GenresPostgresExtractor(PostgresExtractor):
         return genre
 
 
-class PersonsPostgresExtractor(PostgresExtractor):
+class PersonsPostgresExtractor(DataExtractor):
     @staticmethod
     def extract(data: dict) -> PostgresPerson:
         person = PostgresPerson(
