@@ -4,7 +4,7 @@ from typing import Any
 
 import psycopg
 from dto.extractors import DataExtractor
-from dto.transformers import ElasticTransformer
+from dto.transformers import Transformer
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 from state.state import State
@@ -53,7 +53,7 @@ class ElasticTask:
         state_key: str,
         elastic_index: str,
         extractor: DataExtractor,
-        el_transformer: ElasticTransformer,
+        el_transformer: Transformer,
         sql_path: str,
     ):
         """
@@ -123,9 +123,7 @@ class ElasticLoadManager(LoadManager):
                 el_objects, tmp_last_obj_modified = self._create_el_objects(
                     task, pg_data
                 )
-                res = ElasticLoader.load(
-                    self.elastic, task.elastic_index, el_objects
-                )
+                res = ElasticLoader.load(self.elastic, task.elastic_index, el_objects)
                 if res.get("errors", True):
                     logger.error("Elastic loader have a error!")
                     break
