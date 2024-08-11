@@ -11,6 +11,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./data/data_dump.sql:/docker-entrypoint-initdb.d/data_dump.sql
       - ./data/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - "movies_network"
 
   fastapi:
     container_name: movies_fastapi
@@ -27,23 +29,8 @@ services:
       - ./src:/fastapi_movies/src
     ports:
       - "80:80"
-
-  tests:
-    image: python:3.11
-    container_name: movies_tests
-    env_file:
-      - .env
-    volumes:
-      - ./:/fastapi_movies
-    working_dir: /fastapi_movies/src
-    environment:
-      - PYTHONPATH=/fastapi_movies/src
-    entrypoint: >
-      sh -c "pip install --upgrade pip
-      && pip install -r /fastapi_movies/requirements.txt
-      && python3 tests/functional/utils/wait_for_es.py
-      && python3 tests/functional/utils/wait_for_redis.py
-      && tail -f /dev/null"
+    networks:
+      - "movies_network"
 
   redis:
     image: redis:latest
@@ -54,6 +41,8 @@ services:
         - ~/redis.conf:/usr/local/etc/redis/redis.conf
     env_file:
       - .env
+    networks:
+      - "movies_network"
 
   es:
     image: elasticsearch:8.6.2
@@ -69,18 +58,27 @@ services:
       interval: 10s
       timeout: 30s
       retries: 3
+    networks:
+      - "movies_network"
 
   postgres_to_elastic:
     container_name: postgres_to_elastic
     build:
       context: .
       dockerfile: data_sync.Dockerfile
+    volumes:
+      - ./src:/fastapi_movies/src
     env_file:
       - .env
     depends_on:
       es:
         condition: service_healthy
+    networks:
+      - "movies_network"
 
 
 volumes:
   postgres_data:
+
+networks:
+  movies_network:

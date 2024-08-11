@@ -1,4 +1,3 @@
-import json
 from functools import lru_cache
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -6,26 +5,27 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
-from db.redis import get_redis
+from db.redis import PersonsRedisCache, get_redis
 from models.models import PersonDetail
 
-from .utils import (CACHE_EXPIRE_IN_SECONDS, get_offset_params,
-                    get_search_params)
+from .utils import get_offset_params, get_search_params
 
 
 class PersonService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+        self.redis = PersonsRedisCache(redis)
         self.elastic = elastic
         self._index = "persons"
 
     async def get_by_id(self, person_id: str) -> PersonDetail | None:
-        person = await self._person_or_persons_from_cache(person_id)
+        person = await self.redis.get_person(person_id)
+        if person:
+            return person
+
+        person = await self._get_person_from_elastic(person_id)
         if not person:
-            person = await self._get_person_from_elastic(person_id)
-            if not person:
-                return None
-            await self._put_persons_or_person_to_cache(person)
+            return None
+        await self.redis.put_person(person)
         return person
 
     async def search_persons(
@@ -38,11 +38,10 @@ class PersonService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**search_params, **offset_params}
 
-        # находим личностей в кэше
-        persons_list = await self._person_or_persons_from_cache(
-            person_search=query,
-            persons_page_number=page_num,
-            persons_page_size=page_size,
+        persons_list = await self.redis.get_persons(
+            query,
+            page_num,
+            page_size,
         )
         if persons_list:
             return persons_list
@@ -55,12 +54,11 @@ class PersonService:
         hits_persons = persons["hits"]["hits"]
         persons_list = [PersonDetail(**person["_source"]) for person in hits_persons]
 
-        # сохраняем в кэш
-        await self._put_persons_or_person_to_cache(
-            persons_or_person=persons_list,
-            persons_search=query,
-            persons_page_number=page_num,
-            persons_page_size=page_size,
+        await self.redis.put_persons(
+            persons_list,
+            query,
+            page_num,
+            page_size,
         )
 
         return persons_list
@@ -71,50 +69,6 @@ class PersonService:
         except NotFoundError:
             return None
         return PersonDetail(**(doc["_source"]))
-
-    async def _person_or_persons_from_cache(
-        self,
-        person_id: str | None = None,
-        person_search: str | None = None,
-        persons_page_number: int | None = None,
-        persons_page_size: int | None = None,
-    ) -> PersonDetail | list[PersonDetail] | None:
-        # если есть поиск по полю, отдаем список личностей
-        if person_search:
-            list_persons = await self.redis.get(
-                f"persons_{person_search}_{str(persons_page_number)}_{str(persons_page_size)}"
-            )
-            if list_persons:
-                persons_json = json.loads(list_persons)
-                return [PersonDetail.parse_obj(person) for person in persons_json]
-            return None
-
-        # иначе возвращаем одну личность
-        data = await self.redis.get(person_id)
-        if not data:
-            return None
-
-        return PersonDetail.parse_raw(data)
-
-    async def _put_persons_or_person_to_cache(
-        self,
-        persons_or_person: PersonDetail | list[PersonDetail],
-        persons_search: str | None = None,
-        persons_page_number: int | None = None,
-        persons_page_size: int | None = None,
-    ) -> None:
-        # если есть поиск по полю, от отдаем список личностей
-        if persons_search:
-            persons_json = json.dumps([person.dict() for person in persons_or_person])
-            await self.redis.set(
-                f"persons_{persons_search}_{str(persons_page_number)}_{str(persons_page_size)}",
-                persons_json,
-                CACHE_EXPIRE_IN_SECONDS,
-            )
-        else:
-            await self.redis.set(
-                persons_or_person.id, persons_or_person.json(), CACHE_EXPIRE_IN_SECONDS
-            )
 
 
 @lru_cache()
