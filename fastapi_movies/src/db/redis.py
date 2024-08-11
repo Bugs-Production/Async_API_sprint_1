@@ -4,7 +4,7 @@ from typing import Any, List, Optional, Union
 
 from redis.asyncio import Redis
 
-from models.models import Film
+from models.models import Film, GenreDetail
 
 redis: Redis | None = None
 
@@ -70,4 +70,32 @@ class FilmRedisCache(RedisCache):
         cache_key = self.create_cache_key("films", *args)
         await self.put_to_cache(
             cache_key, [film.dict() for film in films], self.CACHE_SECONDS_FOR_FILMS
+        )
+
+
+class GenresRedisCache(RedisCache):
+    """Класс для кэширования жанров"""
+
+    CACHE_SECONDS_FOR_GENRES = 60 * 5
+
+    async def get_genre(self, genre_id: str) -> Optional[GenreDetail]:
+        data = await self.get_from_cache(genre_id)
+        if data:
+            return GenreDetail.parse_obj(data)
+        return None
+
+    async def put_genre(self, genre: GenreDetail) -> None:
+        await self.put_to_cache(genre.id, genre.dict(), self.CACHE_SECONDS_FOR_GENRES)
+
+    async def get_genres(self, *args) -> Optional[List[GenreDetail]]:
+        cache_key = self.create_cache_key("genres", *args)
+        data = await self.get_from_cache(cache_key)
+        if data:
+            return [GenreDetail.parse_obj(item) for item in data]
+        return None
+
+    async def put_genres(self, genres: List[GenreDetail], *args) -> None:
+        cache_key = self.create_cache_key("genres", *args)
+        await self.put_to_cache(
+            cache_key, [genre.dict() for genre in genres], self.CACHE_SECONDS_FOR_GENRES
         )
