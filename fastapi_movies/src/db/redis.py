@@ -1,9 +1,9 @@
 import json
-from abc import ABC, abstractmethod
 from typing import Any, List, Optional
 
 from redis.asyncio import Redis
 
+from db.cache_client import AbstractCache
 from models.models import Film, GenreDetail, PersonDetail
 
 redis: Redis | None = None
@@ -14,35 +14,17 @@ async def get_redis() -> Redis:
     return redis
 
 
-class AbstractRedisCache(ABC):
-    """Абстрактный класс для кэширования Redis"""
-
-    def __init__(self, redis_client):
-        self.redis_client = redis_client
-
-    @abstractmethod
-    async def get_from_cache(self, key: str) -> Optional[Any]:
-        pass
-
-    @abstractmethod
-    async def put_to_cache(self, key: str, value: Any, ttl: int) -> None:
-        pass
-
-    def create_cache_key(self, *args) -> str:
-        return "_".join(str(arg) for arg in args if arg)
-
-
-class RedisCache(AbstractRedisCache):
-    """Реализуем интерфейс"""
+class RedisCache(AbstractCache):
+    """Реализуем интерфейс Redis"""
 
     async def get_from_cache(self, key: str) -> Optional[Any]:
-        data = await self.redis_client.get(key)
+        data = await self.cache_client.get(key)
         if data:
             return json.loads(data)
         return None
 
     async def put_to_cache(self, key: str, value: Any, ttl: int) -> None:
-        await self.redis_client.set(key, json.dumps(value), ex=ttl)
+        await self.cache_client.set(key, json.dumps(value), ex=ttl)
 
 
 class FilmRedisCache(RedisCache):
