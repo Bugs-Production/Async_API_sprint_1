@@ -1,10 +1,10 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from redis.asyncio import Redis
 
-from models.models import Film, GenreDetail
+from models.models import Film, GenreDetail, PersonDetail
 
 redis: Redis | None = None
 
@@ -98,4 +98,36 @@ class GenresRedisCache(RedisCache):
         cache_key = self.create_cache_key("genres", *args)
         await self.put_to_cache(
             cache_key, [genre.dict() for genre in genres], self.CACHE_SECONDS_FOR_GENRES
+        )
+
+
+class PersonsRedisCache(RedisCache):
+    """Класс для кэширования личностей"""
+
+    CACHE_SECONDS_FOR_PERSONS = 60 * 5
+
+    async def get_person(self, person_id: str) -> Optional[PersonDetail]:
+        data = await self.get_from_cache(person_id)
+        if data:
+            return PersonDetail.parse_obj(data)
+        return None
+
+    async def put_person(self, person: PersonDetail) -> None:
+        await self.put_to_cache(
+            person.id, person.dict(), self.CACHE_SECONDS_FOR_PERSONS
+        )
+
+    async def get_persons(self, *args) -> Optional[List[PersonDetail]]:
+        cache_key = self.create_cache_key("persons", *args)
+        data = await self.get_from_cache(cache_key)
+        if data:
+            return [PersonDetail.parse_obj(item) for item in data]
+        return None
+
+    async def put_persons(self, persons: List[GenreDetail], *args) -> None:
+        cache_key = self.create_cache_key("persons", *args)
+        await self.put_to_cache(
+            cache_key,
+            [person.dict() for person in persons],
+            self.CACHE_SECONDS_FOR_PERSONS,
         )
