@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from dto.models import (ElasticFilmWork, ElasticGenre, ElasticPerson,
                         PostgresFilmWork, PostgresGenre, PostgresPerson)
@@ -7,7 +8,7 @@ from utils.utils import create_elastic_objects_list
 
 class Transformer(ABC):
     @abstractmethod
-    def transform(self, data):
+    def transform(self, data) -> Any:
         """
         Приводит данные из постгреса к формату
         для загрузки в Elastic

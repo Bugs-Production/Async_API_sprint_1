@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime as dt
-from typing import Any
+from typing import Any, AnyStr
 
 import psycopg
 from dto.extractors import DataExtractor
@@ -25,7 +25,7 @@ class PostgresDb(Database):
     def __init__(self, conn: psycopg.Connection):
         self.conn = conn
 
-    def get_query(self, path):
+    def get_query(self, path: str) -> AnyStr:
         with open(path, "rb") as f:
             query = f.read()
         return query
@@ -60,11 +60,11 @@ class ElasticLoader:
 
 class Task(ABC):
     @property
-    def extractor(self):
+    def extractor(self) -> DataExtractor:
         return self.extractor
 
     @property
-    def transformer(self):
+    def transformer(self) -> Transformer:
         return self.transformer
 
 
@@ -96,7 +96,7 @@ class ElasticTask(Task):
         self.sql_path = sql_path
 
     @property
-    def extractor(self):
+    def extractor(self) -> DataExtractor:
         return self.extractor
 
     @extractor.setter
@@ -104,7 +104,7 @@ class ElasticTask(Task):
         self.extractor = value
 
     @property
-    def transformer(self):
+    def transformer(self) -> Transformer:
         return self.transformer
 
     @transformer.setter
@@ -138,7 +138,9 @@ class ElasticLoadManager(LoadManager):
         self.last_modified_obj = None
         self.tasks = []
 
-    def _create_el_objects(self, task: ElasticTask, db_data: list[dict]):
+    def _create_el_objects(
+        self, task: ElasticTask, db_data: list[dict]
+    ) -> tuple[list[Any], str]:
         elastic_objects = []
         tmp_last_obj_modified = self.last_modified_obj
         for obj in db_data:
@@ -155,11 +157,11 @@ class ElasticLoadManager(LoadManager):
         for task in self.tasks:
             self.last_modified_obj = self.state.get_state(task.state_key, dt.min)
             query = self.db.get_query(task.sql_path)
-            while pg_data := self.db.execute(
+            while db_data := self.db.execute(
                 query=query, params={"dttm": self.last_modified_obj}
             ):
                 el_objects, tmp_last_obj_modified = self._create_el_objects(
-                    task, pg_data
+                    task, db_data
                 )
                 res = ElasticLoader.load(self.elastic, task.elastic_index, el_objects)
                 if res.get("errors", True):

@@ -28,6 +28,23 @@ services:
     ports:
       - "80:80"
 
+  tests:
+    image: python:3.11
+    container_name: movies_tests
+    env_file:
+      - .env
+    volumes:
+      - ./:/fastapi_movies
+    working_dir: /fastapi_movies/src
+    environment:
+      - PYTHONPATH=/fastapi_movies/src
+    entrypoint: >
+      sh -c "pip install --upgrade pip
+      && pip install -r /fastapi_movies/requirements.txt
+      && python3 tests/functional/utils/wait_for_es.py
+      && python3 tests/functional/utils/wait_for_redis.py
+      && tail -f /dev/null"
+
   redis:
     image: redis:latest
     container_name: movies_redis
