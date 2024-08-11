@@ -1,4 +1,3 @@
-import json
 from functools import lru_cache
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -9,8 +8,7 @@ from db.elastic import get_elastic
 from db.redis import FilmRedisCache, get_redis
 from models.models import Film
 
-from .utils import (CACHE_EXPIRE_IN_SECONDS, create_cache_key_for_films,
-                    get_genre_filter_params, get_offset_params,
+from .utils import (get_genre_filter_params, get_offset_params,
                     get_search_params, get_sort_params)
 
 
