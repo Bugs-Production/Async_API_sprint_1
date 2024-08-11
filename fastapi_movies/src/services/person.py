@@ -38,7 +38,6 @@ class PersonService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**search_params, **offset_params}
 
-        # находим личностей в кэше
         persons_list = await self.redis.get_persons(
             query,
             page_num,
@@ -55,7 +54,6 @@ class PersonService:
         hits_persons = persons["hits"]["hits"]
         persons_list = [PersonDetail(**person["_source"]) for person in hits_persons]
 
-        # сохраняем в кэш
         await self.redis.put_persons(
             persons_list,
             query,

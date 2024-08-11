@@ -37,7 +37,6 @@ class GenreService:
         hits_genres = genres["hits"]["hits"]
         genres_list = [GenreDetail(**genre["_source"]) for genre in hits_genres]
 
-        # сохраняем список жанров в кэш
         await self.redis.put_genres(
             genres_list,
             page_num,
@@ -47,15 +46,12 @@ class GenreService:
         return genres_list
 
     async def get_by_id(self, genre_id: str) -> GenreDetail | None:
-        # Пытаемся получить данные из кеша, потому что оно работает быстрее
         genre = await self.redis.get_genre(genre_id=genre_id)
         if genre:
             return genre
 
-        # Если жанра нет в кеше, то ищем его в Elasticsearch
         genre = await self._get_genre_from_elastic(genre_id)
         if not genre:
-            # Если отсутствует в Elasticsearch - жанра вообще нет в базе
             return None
 
         await self.redis.put_genre(genre=genre)

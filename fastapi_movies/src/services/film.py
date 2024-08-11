@@ -17,20 +17,16 @@ class FilmService:
         self.redis = FilmRedisCache(redis)
         self.elastic = elastic
         self._index = "movies"
-        self.redis_cache = FilmRedisCache
 
     async def get_by_id(self, film_id: str) -> Film | None:
-        # если находим фильм в кэше, достаем от туда
         film = await self.redis.get_film(film_id=film_id)
         if film:
             return film
 
-        # Если фильма нет в кеше, то ищем его в Elasticsearch
         film = await self._get_film_from_elastic(film_id)
         if not film:
-            # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
             return None
-        # Сохраняем фильм в кеш
+
         await self.redis.put_film(film=film)
         return film
 
@@ -46,7 +42,6 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **genre_params, **offset_params}
 
-        # пытаемся найти фильмы в кэше
         list_films = await self.redis.get_films(
             page_num,
             page_size,
@@ -56,7 +51,6 @@ class FilmService:
         if list_films:
             return list_films
 
-        # если в кэше нет, идем в эластик
         try:
             films = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
@@ -66,7 +60,6 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по параметрам
         await self.redis.put_films(
             list_films,
             page_num,
@@ -89,7 +82,6 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **search_params, **offset_params}
 
-        # пытаемся найти фильмы в кэше
         list_films = await self.redis.get_films(
             page_num,
             page_size,
@@ -108,7 +100,6 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по параметрам
         await self.redis.put_films(
             list_films,
             page_num,

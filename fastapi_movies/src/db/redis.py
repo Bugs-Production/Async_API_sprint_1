@@ -1,5 +1,5 @@
 import json
-from typing import Any, List, Optional
+from typing import Any, List
 
 from redis.asyncio import Redis
 
@@ -17,7 +17,9 @@ async def get_redis() -> Redis:
 class RedisCache(AbstractCache):
     """Реализуем интерфейс Redis"""
 
-    async def get_from_cache(self, key: str) -> Optional[Any]:
+    CACHE_SECONDS = 60 * 5
+
+    async def get_from_cache(self, key: str) -> dict | None:
         data = await self.cache_client.get(key)
         if data:
             return json.loads(data)
@@ -30,86 +32,84 @@ class RedisCache(AbstractCache):
 class FilmRedisCache(RedisCache):
     """Класс для кэширования фильмов"""
 
-    CACHE_SECONDS_FOR_FILMS = 60 * 5
+    _cache_prefix = "films"
 
-    async def get_film(self, film_id: str) -> Optional[Film]:
+    async def get_film(self, film_id: str) -> Film | None:
         data = await self.get_from_cache(film_id)
         if data:
             return Film.parse_obj(data)
         return None
 
     async def put_film(self, film: Film) -> None:
-        await self.put_to_cache(film.id, film.dict(), self.CACHE_SECONDS_FOR_FILMS)
+        await self.put_to_cache(film.id, film.dict(), self.CACHE_SECONDS)
 
-    async def get_films(self, *args) -> Optional[List[Film]]:
-        cache_key = self.create_cache_key("films", *args)
+    async def get_films(self, *args) -> list[Film] | None:
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         data = await self.get_from_cache(cache_key)
         if data:
             return [Film.parse_obj(item) for item in data]
         return None
 
     async def put_films(self, films: List[Film], *args) -> None:
-        cache_key = self.create_cache_key("films", *args)
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
-            cache_key, [film.dict() for film in films], self.CACHE_SECONDS_FOR_FILMS
+            cache_key, [film.dict() for film in films], self.CACHE_SECONDS
         )
 
 
 class GenresRedisCache(RedisCache):
     """Класс для кэширования жанров"""
 
-    CACHE_SECONDS_FOR_GENRES = 60 * 5
+    _cache_prefix = "genres"
 
-    async def get_genre(self, genre_id: str) -> Optional[GenreDetail]:
+    async def get_genre(self, genre_id: str) -> GenreDetail | None:
         data = await self.get_from_cache(genre_id)
         if data:
             return GenreDetail.parse_obj(data)
         return None
 
     async def put_genre(self, genre: GenreDetail) -> None:
-        await self.put_to_cache(genre.id, genre.dict(), self.CACHE_SECONDS_FOR_GENRES)
+        await self.put_to_cache(genre.id, genre.dict(), self.CACHE_SECONDS)
 
-    async def get_genres(self, *args) -> Optional[List[GenreDetail]]:
-        cache_key = self.create_cache_key("genres", *args)
+    async def get_genres(self, *args) -> list[GenreDetail] | None:
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         data = await self.get_from_cache(cache_key)
         if data:
             return [GenreDetail.parse_obj(item) for item in data]
         return None
 
     async def put_genres(self, genres: List[GenreDetail], *args) -> None:
-        cache_key = self.create_cache_key("genres", *args)
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
-            cache_key, [genre.dict() for genre in genres], self.CACHE_SECONDS_FOR_GENRES
+            cache_key, [genre.dict() for genre in genres], self.CACHE_SECONDS
         )
 
 
 class PersonsRedisCache(RedisCache):
     """Класс для кэширования личностей"""
 
-    CACHE_SECONDS_FOR_PERSONS = 60 * 5
+    _cache_prefix = "persons"
 
-    async def get_person(self, person_id: str) -> Optional[PersonDetail]:
+    async def get_person(self, person_id: str) -> PersonDetail | None:
         data = await self.get_from_cache(person_id)
         if data:
             return PersonDetail.parse_obj(data)
         return None
 
     async def put_person(self, person: PersonDetail) -> None:
-        await self.put_to_cache(
-            person.id, person.dict(), self.CACHE_SECONDS_FOR_PERSONS
-        )
+        await self.put_to_cache(person.id, person.dict(), self.CACHE_SECONDS)
 
-    async def get_persons(self, *args) -> Optional[List[PersonDetail]]:
-        cache_key = self.create_cache_key("persons", *args)
+    async def get_persons(self, *args) -> list[PersonDetail] | None:
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         data = await self.get_from_cache(cache_key)
         if data:
             return [PersonDetail.parse_obj(item) for item in data]
         return None
 
     async def put_persons(self, persons: List[GenreDetail], *args) -> None:
-        cache_key = self.create_cache_key("persons", *args)
+        cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
             cache_key,
             [person.dict() for person in persons],
-            self.CACHE_SECONDS_FOR_PERSONS,
+            self.CACHE_SECONDS,
         )
