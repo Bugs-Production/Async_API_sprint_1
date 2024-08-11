@@ -58,13 +58,23 @@ class ElasticLoader:
         return res
 
 
-class ElasticTask:
+class Task(ABC):
+    @property
+    def extractor(self):
+        return self.extractor
+
+    @property
+    def transformer(self):
+        return self.transformer
+
+
+class ElasticTask(Task):
     def __init__(
         self,
         state_key: str,
         elastic_index: str,
         extractor: DataExtractor,
-        el_transformer: Transformer,
+        transformer: Transformer,
         sql_path: str,
     ):
         """
@@ -82,8 +92,24 @@ class ElasticTask:
         self.state_key = state_key
         self.elastic_index = elastic_index
         self.extractor = extractor
-        self.el_transformer = el_transformer
+        self.transformer = transformer
         self.sql_path = sql_path
+
+    @property
+    def extractor(self):
+        return self.extractor
+
+    @extractor.setter
+    def extractor(self, value):
+        self.extractor = value
+
+    @property
+    def transformer(self):
+        return self.transformer
+
+    @transformer.setter
+    def transformer(self, value):
+        self.transformer = value
 
 
 class LoadManager(ABC):
@@ -112,14 +138,14 @@ class ElasticLoadManager(LoadManager):
         self.last_modified_obj = None
         self.tasks = []
 
-    def _create_el_objects(self, task: ElasticTask, pg_data: list[dict]):
+    def _create_el_objects(self, task: ElasticTask, db_data: list[dict]):
         elastic_objects = []
         tmp_last_obj_modified = self.last_modified_obj
-        for obj in pg_data:
-            pg_obj = task.extractor.extract(obj)
-            elastic_obj = task.el_transformer.transform(pg_obj)
+        for obj in db_data:
+            db_obj = task.extractor.extract(obj)
+            elastic_obj = task.transformer.transform(db_obj)
             elastic_objects.append(elastic_obj)
-            tmp_last_obj_modified = pg_obj.modified
+            tmp_last_obj_modified = db_obj.modified
         return elastic_objects, tmp_last_obj_modified
 
     def add_task(self, task: ElasticTask):
