@@ -4,7 +4,7 @@ from config.elastic_mapping import (FILMS_MAPPING, GENRES_MAPPING,
                                     PERSONS_MAPPING)
 from dto.extractors import (FilmsPostgresExtractor, GenresPostgresExtractor,
                             PersonsPostgresExtractor)
-from dto.loaders import LoadManager, Postgres, Task
+from dto.loaders import ElasticLoadManager, ElasticTask, PostgresDb
 from dto.transformers import (FilmsElasticTransformer,
                               GenresElasticTransformer,
                               PersonsElasticTransformer)
@@ -55,32 +55,33 @@ def main():
     with psycopg.connect(
         **dsl, row_factory=dict_row, cursor_factory=ClientCursor
     ) as pg_conn:
-        pg = Postgres(pg_conn)
-        manager = LoadManager(pg=pg, elastic=elastic, state=state)
-        film_work_task = Task(
+        pg = PostgresDb(pg_conn)
+        manager = ElasticLoadManager(db=pg, elastic=elastic, state=state)
+        film_work_task = ElasticTask(
             state_key=FILM_WORK_STATE_KEY,
             elastic_index=MOVIES_INDEX,
             extractor=FilmsPostgresExtractor,
             el_transformer=FilmsElasticTransformer,
             sql_path="storage/postgresql/queries/load_films.sql",
         )
-        genre_task = Task(
+        genre_task = ElasticTask(
             state_key=GENRE_STATE_KEY,
             elastic_index=GENRES_INDEX,
             extractor=GenresPostgresExtractor,
             el_transformer=GenresElasticTransformer,
             sql_path="storage/postgresql/queries/load_genres.sql",
         )
-        person_task = Task(
+        person_task = ElasticTask(
             state_key=PERSON_STATE_KEY,
             elastic_index=PERSONS_INDEX,
             extractor=PersonsPostgresExtractor,
             el_transformer=PersonsElasticTransformer,
             sql_path="storage/postgresql/queries/load_persons.sql",
         )
-        manager.load_to_elastic(film_work_task)
-        manager.load_to_elastic(genre_task)
-        manager.load_to_elastic(person_task)
+        manager.add_task(film_work_task)
+        manager.add_task(genre_task)
+        manager.add_task(person_task)
+        manager.load()
 
 
 if __name__ == "__main__":

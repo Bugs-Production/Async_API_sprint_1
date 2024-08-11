@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from dto.models import (ElasticFilmWork, ElasticGenre, ElasticPerson,
                         PostgresFilmWork, PostgresGenre, PostgresPerson)
 from utils.utils import create_elastic_objects_list
 
 
-class ElasticTransformer(ABC):
-    @staticmethod
+class Transformer(ABC):
     @abstractmethod
-    def transform(data):
+    def transform(self, data) -> Any:
         """
         Приводит данные из постгреса к формату
         для загрузки в Elastic
@@ -18,9 +18,8 @@ class ElasticTransformer(ABC):
         pass
 
 
-class FilmsElasticTransformer(ElasticTransformer):
-    @staticmethod
-    def transform(data: PostgresFilmWork) -> ElasticFilmWork:
+class FilmsElasticTransformer(Transformer):
+    def transform(self, data: PostgresFilmWork) -> ElasticFilmWork:
         el_actors = create_elastic_objects_list(data.actors)
 
         el_directors = create_elastic_objects_list(data.directors)
@@ -46,9 +45,8 @@ class FilmsElasticTransformer(ElasticTransformer):
         return film_work
 
 
-class GenresElasticTransformer(ElasticTransformer):
-    @staticmethod
-    def transform(data: PostgresGenre) -> ElasticGenre:
+class GenresElasticTransformer(Transformer):
+    def transform(self, data: PostgresGenre) -> ElasticGenre:
         genre = ElasticGenre(
             id=str(data.id),
             name=data.name,
@@ -59,9 +57,8 @@ class GenresElasticTransformer(ElasticTransformer):
         return genre
 
 
-class PersonsElasticTransformer(ElasticTransformer):
-    @staticmethod
-    def transform(data: PostgresPerson) -> ElasticPerson:
+class PersonsElasticTransformer(Transformer):
+    def transform(self, data: PostgresPerson) -> ElasticPerson:
         person = ElasticPerson(
             id=str(data.id),
             full_name=data.full_name,
