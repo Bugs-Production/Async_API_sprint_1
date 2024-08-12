@@ -7,7 +7,7 @@ from tests.functional.settings import test_settings
 
 @pytest.fixture(name="es_write_data")
 def es_write_data():
-    async def inner(data: list[dict], index, mapping):
+    async def inner(data: list[dict], index: str, mapping: dict):
         es_client = AsyncElasticsearch(hosts=test_settings.es_host, verify_certs=False)
         if await es_client.indices.exists(index=index):
             await es_client.indices.delete(index=index)
