@@ -1,5 +1,5 @@
 import json
-from typing import Any, List
+from typing import Any
 
 from redis.asyncio import Redis
 
@@ -50,7 +50,7 @@ class FilmRedisCache(RedisCache):
             return [Film.parse_obj(item) for item in data]
         return None
 
-    async def put_films(self, films: List[Film], *args) -> None:
+    async def put_films(self, films: list[Film], *args) -> None:
         cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
             cache_key, [film.dict() for film in films], self.CACHE_SECONDS
@@ -78,7 +78,7 @@ class GenresRedisCache(RedisCache):
             return [GenreDetail.parse_obj(item) for item in data]
         return None
 
-    async def put_genres(self, genres: List[GenreDetail], *args) -> None:
+    async def put_genres(self, genres: list[GenreDetail], *args) -> None:
         cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
             cache_key, [genre.dict() for genre in genres], self.CACHE_SECONDS
@@ -106,7 +106,7 @@ class PersonsRedisCache(RedisCache):
             return [PersonDetail.parse_obj(item) for item in data]
         return None
 
-    async def put_persons(self, persons: List[GenreDetail], *args) -> None:
+    async def put_persons(self, persons: list[GenreDetail], *args) -> None:
         cache_key = self.create_cache_key(self._cache_prefix, *args)
         await self.put_to_cache(
             cache_key,
