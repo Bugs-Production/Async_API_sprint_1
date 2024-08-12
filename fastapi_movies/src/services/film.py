@@ -1,4 +1,3 @@
-import json
 from functools import lru_cache
 
 from elasticsearch import AsyncElasticsearch, NotFoundError
@@ -6,33 +5,29 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
-from db.redis import get_redis
+from db.redis import FilmRedisCache, get_redis
 from models.models import Film
 
-from .utils import (CACHE_EXPIRE_IN_SECONDS, create_cache_key_for_films,
-                    get_genre_filter_params, get_offset_params,
+from .utils import (get_genre_filter_params, get_offset_params,
                     get_search_params, get_sort_params)
 
 
 class FilmService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+        self.redis = FilmRedisCache(redis)
         self.elastic = elastic
         self._index = "movies"
 
     async def get_by_id(self, film_id: str) -> Film | None:
-        # если находим фильм в кэше, достаем от туда
-        film = await self._film_or_films_from_cache(film_id=film_id)
+        film = await self.redis.get_film(film_id=film_id)
         if film:
             return film
 
-        # Если фильма нет в кеше, то ищем его в Elasticsearch
         film = await self._get_film_from_elastic(film_id)
         if not film:
-            # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
             return None
-        # Сохраняем фильм в кеш
-        await self._put_film_or_films_to_cache(films_or_film=film)
+
+        await self.redis.put_film(film=film)
         return film
 
     async def get_all_films(
@@ -47,17 +42,15 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **genre_params, **offset_params}
 
-        # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(
-            films_page_num=page_num,
-            films_page_size=page_size,
-            films_sort=sorting,
-            films_genre=genre_filter,
+        list_films = await self.redis.get_films(
+            page_num,
+            page_size,
+            sorting,
+            genre_filter,
         )
         if list_films:
             return list_films
 
-        # если в кэше нет, идем в эластик
         try:
             films = await self.elastic.search(index=self._index, body=params)
         except NotFoundError:
@@ -67,13 +60,12 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по параметрам
-        await self._put_film_or_films_to_cache(
-            films_or_film=list_films,
-            films_page_num=page_num,
-            films_page_size=page_size,
-            films_genre=genre_filter,
-            films_sort=sorting,
+        await self.redis.put_films(
+            list_films,
+            page_num,
+            page_size,
+            genre_filter,
+            sorting,
         )
 
         return list_films
@@ -90,12 +82,11 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **search_params, **offset_params}
 
-        # пытаемся найти фильмы в кэше
-        list_films = await self._film_or_films_from_cache(
-            films_page_num=page_num,
-            films_page_size=page_size,
-            films_sort=sorting,
-            films_search=query,
+        list_films = await self.redis.get_films(
+            page_num,
+            page_size,
+            sorting,
+            query,
         )
         if list_films:
             return list_films
@@ -109,13 +100,12 @@ class FilmService:
 
         list_films = [Film(**film["_source"]) for film in hits_films]
 
-        # сохраняем в кэш по параметрам
-        await self._put_film_or_films_to_cache(
-            films_page_num=page_num,
-            films_or_film=list_films,
-            films_page_size=page_size,
-            films_search=query,
-            films_sort=sorting,
+        await self.redis.put_films(
+            list_films,
+            page_num,
+            page_size,
+            query,
+            sorting,
         )
 
         return list_films
@@ -126,75 +116,6 @@ class FilmService:
         except NotFoundError:
             return None
         return Film(**doc["_source"])
-
-    async def _film_or_films_from_cache(
-        self,
-        film_id: str | None = None,
-        films_page_num: int | None = None,
-        films_page_size: int | None = None,
-        films_sort: str | None = None,
-        films_genre: str | None = None,
-        films_search: str | None = None,
-    ) -> list[Film] | None:
-        if (
-            films_page_num and films_page_size
-        ):  # если есть номер страницы и размер, отдаем список фильмов по странице
-            # формируем ключ
-            cache_key = create_cache_key_for_films(
-                page_num=films_page_num,
-                page_size=films_page_size,
-                sort=films_sort,
-                genre=films_genre,
-                search=films_search,
-            )
-
-            films_json = await self.redis.get(cache_key)
-            if films_json:
-                films_data = json.loads(films_json)
-                return [Film.parse_obj(film_data) for film_data in films_data]
-            return None
-
-        # иначе же находим один фильм по id
-        data = await self.redis.get(film_id)
-
-        # если в кэше нет такого фильма отдаем None
-        if not data:
-            return None
-
-        # возвращаем фильм
-        return Film.parse_raw(data)
-
-    async def _put_film_or_films_to_cache(
-        self,
-        films_or_film: Film | list[Film],
-        films_page_num: int | None = None,
-        films_page_size: int | None = None,
-        films_sort: str | None = None,
-        films_genre: str | None = None,
-        films_search: str | None = None,
-    ) -> None:
-        # Если указаны номер страницы и размер страницы, сохраняем список фильмов
-        if films_page_num and films_page_size:
-            # формируем ключ для кэша
-            cache_key = create_cache_key_for_films(
-                page_num=films_page_num,
-                page_size=films_page_size,
-                sort=films_sort,
-                genre=films_genre,
-                search=films_search,
-            )
-
-            films_json = json.dumps([f.dict() for f in films_or_film])
-            await self.redis.set(
-                cache_key,
-                films_json,
-                CACHE_EXPIRE_IN_SECONDS,
-            )
-        else:
-            # иначе сохраняем один фильм
-            await self.redis.set(
-                films_or_film.id, films_or_film.json(), CACHE_EXPIRE_IN_SECONDS
-            )
 
 
 @lru_cache()
