@@ -39,7 +39,7 @@ def es_write_data(es_client: AsyncElasticsearch):
             errors = exc.errors
 
         if errors:
-            raise Exception("Ошибка записи данных в Elasticsearch")
+            raise Exception(f"Ошибка записи данных в Elasticsearch: {errors}")
 
     return inner
 
