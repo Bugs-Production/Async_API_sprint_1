@@ -1,18 +1,30 @@
 .PHONY: build
 build:
-	 docker-compose build
+	docker-compose build
 
 .PHONY: up
 up:
-	 docker-compose up -d
+	docker-compose up -d
 
 .PHONY: down
 down:
-	 docker-compose down
+	docker-compose down
 
-.PHONY: docker_test
-docker_test:
-	docker exec -it movies_tests pytest tests/functional/src
+.PHONY: build_test
+build_test:
+	docker-compose -f docker-compose.test.yml build
+
+.PHONY: up_test
+up_test:
+	docker-compose -f docker-compose.test.yml up -d
+
+.PHONY: down_test
+down_test:
+	docker-compose -f docker-compose.test.yml down
+
+.PHONY: test
+test:
+	docker exec -it movies_tests pytest /tests/functional/src
 
 .PHONY: format
 format:
