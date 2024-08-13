@@ -1,11 +1,19 @@
+import asyncio
 from typing import Any
 
 import aiohttp
 import pytest
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk
+from elasticsearch.helpers import BulkIndexError, async_bulk
 
 from tests.functional.settings import test_settings
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session")
@@ -22,9 +30,12 @@ def es_write_data(es_client: AsyncElasticsearch):
             await es_client.indices.delete(index=index)
         await es_client.indices.create(index=index, **mapping)
 
-        updated, errors = await async_bulk(
-            client=es_client, actions=data, refresh="wait_for"
-        )
+        try:
+            updated, errors = await async_bulk(
+                client=es_client, actions=data, refresh="wait_for"
+            )
+        except BulkIndexError as exc:
+            errors = exc.errors
 
         if errors:
             raise Exception("Ошибка записи данных в Elasticsearch")
