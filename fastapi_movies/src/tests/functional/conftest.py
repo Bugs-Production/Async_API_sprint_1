@@ -3,6 +3,7 @@ from typing import Any
 
 import aiohttp
 import pytest
+import redis.asyncio as redis
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import BulkIndexError, async_bulk
 
@@ -64,3 +65,18 @@ def aiohttp_request(aiohttp_session: aiohttp.ClientSession):
             return body, status
 
     return inner
+
+
+@pytest.fixture(scope="session")
+async def redis_client():
+    pool = redis.ConnectionPool.from_url(
+        f"redis://{test_settings.redis_host}:{test_settings.redis_port}"
+    )
+    client = redis.Redis.from_pool(pool)
+    yield client
+    await client.close()
+
+
+@pytest.fixture(scope="function")
+async def redis_flushall(redis_client):
+    await redis_client.flushall()
