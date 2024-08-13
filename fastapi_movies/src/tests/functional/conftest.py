@@ -1,11 +1,20 @@
+import asyncio
 from typing import Any
 
 import aiohttp
 import pytest
+import redis.asyncio as redis
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk
+from elasticsearch.helpers import BulkIndexError, async_bulk
 
 from tests.functional.settings import test_settings
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session")
@@ -22,12 +31,15 @@ def es_write_data(es_client: AsyncElasticsearch):
             await es_client.indices.delete(index=index)
         await es_client.indices.create(index=index, **mapping)
 
-        updated, errors = await async_bulk(
-            client=es_client, actions=data, refresh="wait_for"
-        )
+        try:
+            updated, errors = await async_bulk(
+                client=es_client, actions=data, refresh="wait_for"
+            )
+        except BulkIndexError as exc:
+            errors = exc.errors
 
         if errors:
-            raise Exception("Ошибка записи данных в Elasticsearch")
+            raise Exception(f"Ошибка записи данных в Elasticsearch: {errors}")
 
     return inner
 
@@ -53,3 +65,18 @@ def aiohttp_request(aiohttp_session: aiohttp.ClientSession):
             return body, status
 
     return inner
+
+
+@pytest.fixture(scope="session")
+async def redis_client():
+    pool = redis.ConnectionPool.from_url(
+        f"redis://{test_settings.redis_host}:{test_settings.redis_port}"
+    )
+    client = redis.Redis.from_pool(pool)
+    yield client
+    await client.close()
+
+
+@pytest.fixture(scope="function")
+async def redis_flushall(redis_client):
+    await redis_client.flushall()
