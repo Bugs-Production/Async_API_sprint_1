@@ -40,7 +40,7 @@ async def aiohttp_session():
 
 
 @pytest.fixture(scope="session")
-def aiohttp_client_data(aiohttp_session: aiohttp.ClientSession):
+def aiohttp_request(aiohttp_session: aiohttp.ClientSession):
     async def inner(
         method: str, endpoint: str, **kwargs: dict[str, Any]
     ) -> tuple[dict, int]:
