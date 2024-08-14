@@ -23,7 +23,7 @@ class TestSettings(BaseSettings):
 
     redis_host: str = Field("127.0.0.1", alias="REDIS_HOST")
     redis_port: str = Field("6379", alias="REDIS_PORT")
-    service_url: str = Field("http://localhost")
+    service_url: str = Field("http://localhost:8080", alias="SERVICE_URL")
 
 
 test_settings = TestSettings()

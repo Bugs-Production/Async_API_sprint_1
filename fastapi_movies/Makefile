@@ -8,7 +8,7 @@ up:
 
 .PHONY: down
 down:
-	docker-compose down
+	docker-compose down -v
 
 .PHONY: build_test
 build_test:
@@ -20,7 +20,7 @@ up_test:
 
 .PHONY: down_test
 down_test:
-	docker-compose -f docker-compose.test.yml down
+	docker-compose -f docker-compose.test.yml down -v
 
 .PHONY: test
 test:
