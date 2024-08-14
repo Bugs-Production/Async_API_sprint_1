@@ -60,22 +60,22 @@ def main():
         film_work_task = ElasticTask(
             state_key=FILM_WORK_STATE_KEY,
             elastic_index=MOVIES_INDEX,
-            extractor=FilmsPostgresExtractor,
-            el_transformer=FilmsElasticTransformer,
+            extractor=FilmsPostgresExtractor(),
+            transformer=FilmsElasticTransformer(),
             sql_path="storage/postgresql/queries/load_films.sql",
         )
         genre_task = ElasticTask(
             state_key=GENRE_STATE_KEY,
             elastic_index=GENRES_INDEX,
-            extractor=GenresPostgresExtractor,
-            el_transformer=GenresElasticTransformer,
+            extractor=GenresPostgresExtractor(),
+            transformer=GenresElasticTransformer(),
             sql_path="storage/postgresql/queries/load_genres.sql",
         )
         person_task = ElasticTask(
             state_key=PERSON_STATE_KEY,
             elastic_index=PERSONS_INDEX,
-            extractor=PersonsPostgresExtractor,
-            el_transformer=PersonsElasticTransformer,
+            extractor=PersonsPostgresExtractor(),
+            transformer=PersonsElasticTransformer(),
             sql_path="storage/postgresql/queries/load_persons.sql",
         )
         manager.add_task(film_work_task)
