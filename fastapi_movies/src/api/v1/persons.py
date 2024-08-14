@@ -13,10 +13,9 @@ router = APIRouter()
 @router.get(
     "/search",
     response_model=list[PersonDetail],
-    summary="Поиск личности по имени",
-    description="Позволяет искать личностей по имени с возможностью пагинации "
-    "и количество результатов на странице. "
-    "Если личности не найдены, возвращается ошибка 404.",
+    summary="Поиск персоны по имени",
+    description="Поиск персон с пагинацией. Если персоны не найдены, возвращается ошибка 404.",
+    response_description="Полное имя и список фильмов с ролями персоны.",
 )
 async def person_search(
     query: str,
@@ -41,10 +40,12 @@ async def person_search(
 @router.get(
     "/{person_id}",
     response_model=PersonDetail,
-    summary="Поиск личности по UUID",
-    description="Возвращает подробную информацию о личности по"
-    " её уникальному идентификатору (UUID). "
-    "Если личность не найдена, возвращается ошибка 404.",
+    summary="Детали персоны",
+    description=(
+        "Возвращает подробную информацию о персоне по её UUID. "
+        "Если персона не найдена, возвращается ошибка 404."
+    ),
+    response_description="Полное имя и список фильмов с ролями персоны.",
 )
 async def person_details(
     person_id: str, person_service: PersonService = Depends(get_person_service)
@@ -61,9 +62,11 @@ async def person_details(
     "/{person_id}/film",
     response_model=list[Film],
     summary="Фильмы персоны",
-    description="Возвращает список фильмов, в которых участвовала личность,"
-    " по её уникальному идентификатору (UUID)."
-    " Если личность или фильмы с её участием не найдены, возвращается ошибка 404.",
+    description=(
+        "Список фильмов с участием персоны по её UUID. "
+        "Если персона или фильмы не найдены, возвращается ошибка 404."
+    ),
+    response_description="Название фильма и рейтинг",
 )
 async def person_films(
     person_id: str, person_service: PersonService = Depends(get_person_service)
