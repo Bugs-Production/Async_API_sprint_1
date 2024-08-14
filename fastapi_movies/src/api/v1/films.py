@@ -14,9 +14,11 @@ router = APIRouter()
     "/search",
     response_model=list[Film],
     summary="Поиск фильмов по названию",
-    description="Эндпоинт для поиска фильмов по заданному названию."
-    " Пользователь может указать параметры сортировки (по популярности), номер страницы "
-    "и количество фильмов на странице для получения результатов.",
+    description=(
+        "Поиск фильмов с пагинацией и сортировкой по популярности. "
+        "Если фильмы не найдены, возвращается ошибка 404."
+    ),
+    response_description="Название и рейтинг фильма",
 )
 async def film_search(
     query: str,
@@ -41,9 +43,12 @@ async def film_search(
 @router.get(
     "/",
     response_model=list[Film],
-    summary="Все фильмы",
-    description="Возвращает список всех фильмов с поддержкой пагинации, фильтрации по жанру и рейтингу фильмов. "
-    "Пользователь может указать размер страницы для получения результатов.",
+    summary="Список фильмов",
+    description=(
+        "Список фильмов с пагинацией, фильтрацией по жанру и рейтингу. "
+        "Размер страницы задается пользователем."
+    ),
+    response_description="Название и рейтинг фильма",
 )
 async def films(
     sort: str | None = "-imdb_rating",
@@ -71,10 +76,12 @@ async def films(
 @router.get(
     "/{film_id}",
     response_model=FilmDetail,
-    summary="Поиск фильма по UUID",
-    description="Возвращает подробную информацию о фильме"
-    " по его уникальному идентификатору (UUID)."
-    " Если фильм не найден, возвращается ошибка 404.",
+    summary="Детали фильма",
+    description=(
+        "Возвращает подробную информацию о фильме по его UUID. "
+        "Если фильм не найден, возвращается ошибка 404."
+    ),
+    response_description="Название, рейтинг, описание, жанры и участники фильма",
 )
 async def film_details(
     film_id: str, film_service: FilmService = Depends(get_film_service)
@@ -82,7 +89,6 @@ async def film_details(
     film = await film_service.get_by_id(film_id)
 
     if not film:
-        # Если фильм не найден, отдаём 404 статус
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="film not found")
 
     return FilmDetail(**film.dict())
