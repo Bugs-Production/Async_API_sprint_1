@@ -97,19 +97,19 @@ class ElasticTask(Task):
 
     @property
     def extractor(self) -> DataExtractor:
-        return self.extractor
+        return self._extractor
 
     @extractor.setter
     def extractor(self, value):
-        self.extractor = value
+        self._extractor = value
 
     @property
     def transformer(self) -> Transformer:
-        return self.transformer
+        return self._transformer
 
     @transformer.setter
     def transformer(self, value):
-        self.transformer = value
+        self._transformer = value
 
 
 class LoadManager(ABC):

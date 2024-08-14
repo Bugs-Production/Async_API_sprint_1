@@ -4,16 +4,14 @@ from dto.models import PostgresFilmWork, PostgresGenre, PostgresPerson
 
 
 class DataExtractor(ABC):
-    @staticmethod
     @abstractmethod
-    def extract(data: dict):
+    def extract(self, data: dict):
         """Валидирует данные, пришедшие из БД."""
         pass
 
 
 class FilmsPostgresExtractor(DataExtractor):
-    @staticmethod
-    def extract(data: dict) -> PostgresFilmWork:
+    def extract(self, data: dict) -> PostgresFilmWork:
         film_work = PostgresFilmWork(
             id=data["id"],
             title=data["title"],
@@ -31,8 +29,7 @@ class FilmsPostgresExtractor(DataExtractor):
 
 
 class GenresPostgresExtractor(DataExtractor):
-    @staticmethod
-    def extract(data: dict) -> PostgresGenre:
+    def extract(self, data: dict) -> PostgresGenre:
         genre = PostgresGenre(
             id=data["id"],
             name=data["name"],
@@ -44,8 +41,7 @@ class GenresPostgresExtractor(DataExtractor):
 
 
 class PersonsPostgresExtractor(DataExtractor):
-    @staticmethod
-    def extract(data: dict) -> PostgresPerson:
+    def extract(self, data: dict) -> PostgresPerson:
         person = PostgresPerson(
             id=data["id"],
             full_name=data["full_name"],
