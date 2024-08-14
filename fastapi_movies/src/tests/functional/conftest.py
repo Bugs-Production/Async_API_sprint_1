@@ -74,7 +74,7 @@ async def redis_client():
     )
     client = redis.Redis.from_pool(pool)
     yield client
-    await client.close()
+    await client.aclose()
 
 
 @pytest_asyncio.fixture(scope="function")
