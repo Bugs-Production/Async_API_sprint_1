@@ -7,7 +7,8 @@ movies = [
         "id": str(uuid.uuid4()),
         "imdb_rating": 8.5,
         "genres": [
-            {"name": "Action", "id": str(uuid.uuid4())},
+            {"id": "6659b767-b656-49cf-80b2-6a7c012e9d21", "name": "Action"},
+            {"id": "fbd77e08-4dd6-4daf-9276-2abaa709fe87", "name": "Sci-Fi"},
         ],
         "title": "The Star",
         "description": "New World",

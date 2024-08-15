@@ -4,6 +4,8 @@ import pytest
 
 from tests.functional.settings import test_settings
 
+from ..test_data.es_data import movies_data
+
 # fmt: off
 test_data = [
     # 1 кейс, успешное получение фильмов
@@ -59,47 +61,14 @@ class TestFilmsApi:
 
     def setup_method(self):
         self.endpoint = "/api/v1/films"
-        self.es_data = [
-            {
-                "id": str(uuid.uuid4()),
-                "imdb_rating": 8.5,
-                "genres": [
-                    {"id": "6659b767-b656-49cf-80b2-6a7c012e9d21", "name": "Action"},
-                    {"id": "fbd77e08-4dd6-4daf-9276-2abaa709fe87", "name": "Sci-Fi"},
-                ],
-                "title": "The Star",
-                "description": "New World",
-                "directors_names": ["Stan"],
-                "actors_names": ["Ann", "Bob"],
-                "writers_names": ["Ben", "Howard"],
-                "directors": [{"id": str(uuid.uuid4()), "name": "Stan"}],
-                "actors": [
-                    {"id": str(uuid.uuid4()), "name": "Ann"},
-                    {"id": str(uuid.uuid4()), "name": "Bob"},
-                ],
-                "writers": [
-                    {"id": str(uuid.uuid4()), "name": "Ben"},
-                    {"id": str(uuid.uuid4()), "name": "Howard"},
-                ],
-            }
-            for _ in range(60)
-        ]
-        self.first_film_id = self.es_data[0]["id"]
-
-    def preparation_bulk_query(self) -> list[dict]:
-        bulk_query: list[dict] = []
-        for row in self.es_data:
-            data = {"_index": test_settings.es_index_movies, "_id": row["id"]}
-            data.update({"_source": row})
-            bulk_query.append(data)
-
-        return bulk_query
+        self.es_data = movies_data
+        self.first_film_id = self.es_data[0]["_source"]["id"]
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("test_case", test_data)
     async def test_all_films(self, aiohttp_request, es_write_data, test_case):
         await es_write_data(
-            self.preparation_bulk_query(),
+            self.es_data,
             test_settings.es_index_movies,
             test_settings.es_mapping_films,
         )
@@ -120,7 +89,7 @@ class TestFilmsApi:
     @pytest.mark.asyncio
     async def test_get_film_by_id_success(self, aiohttp_request, es_write_data):
         await es_write_data(
-            self.preparation_bulk_query(),
+            self.es_data,
             test_settings.es_index_movies,
             test_settings.es_mapping_films,
         )
@@ -136,7 +105,7 @@ class TestFilmsApi:
     @pytest.mark.asyncio
     async def test_get_film_by_id_error(self, aiohttp_request, es_write_data):
         await es_write_data(
-            self.preparation_bulk_query(),
+            self.es_data,
             test_settings.es_index_movies,
             test_settings.es_mapping_films,
         )
