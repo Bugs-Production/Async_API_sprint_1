@@ -25,7 +25,7 @@ down_test:
 
 .PHONY: test
 test:
-	docker exec -it movies_tests pytest tests/functional/src
+	docker exec -it movies_tests pytest tests/functional/src -s
 
 .PHONY: format
 format:
