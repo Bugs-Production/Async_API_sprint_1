@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from ..settings import test_settings
 
@@ -53,6 +54,44 @@ persons = [
     for _ in range(60)
 ]
 
+genres = [
+    {
+        "id": "1ff0d3aa-e4a9-4035-8c48-e48c5f7568e4",
+        "name": "Action",
+        "description": "",
+        "created": datetime.now().isoformat(),
+        "modified": datetime.now().isoformat(),
+    },
+    {
+        "id": "35b63763-5ee6-4ad3-8165-852231a09f7c",
+        "name": "Adventure",
+        "description": "",
+        "created": datetime.now().isoformat(),
+        "modified": datetime.now().isoformat(),
+    },
+    {
+        "id": "40e45abf-82fb-4ba9-9eac-9505fdb0869b",
+        "name": "Fantasy",
+        "description": "",
+        "created": datetime.now().isoformat(),
+        "modified": datetime.now().isoformat(),
+    },
+    {
+        "id": "80e45abf-82fb-4ba9-9eac-9505fdb0869b",
+        "name": "Thriller",
+        "description": "",
+        "created": datetime.now().isoformat(),
+        "modified": datetime.now().isoformat(),
+    },
+    {
+        "id": "90e45abf-82fb-4ba9-9eac-9505fdb0869b",
+        "name": "Fantasy",
+        "description": "",
+        "created": datetime.now().isoformat(),
+        "modified": datetime.now().isoformat(),
+    },
+]
+
 
 def generate_es_data(index, data_items):
     elastic_bulk_data: list[dict] = []
@@ -63,3 +102,4 @@ def generate_es_data(index, data_items):
 
 movies_data = generate_es_data(test_settings.es_index_movies, movies)
 persons_data = generate_es_data(test_settings.es_index_persons, persons)
+genres_data = generate_es_data(test_settings.es_index_genres, genres)
