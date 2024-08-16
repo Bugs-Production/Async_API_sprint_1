@@ -3,7 +3,7 @@ from typing import Any
 
 from redis.asyncio import Redis
 
-from db.cache_client import AbstractCache
+from db.base_models import AbstractCache
 from models.models import Film, GenreDetail, PersonDetail
 
 redis: Redis | None = None
