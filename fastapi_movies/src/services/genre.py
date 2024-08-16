@@ -28,7 +28,7 @@ class GenreService:
         if genres:
             return genres
 
-        doc = await self.elastic.search(index=self._index, body=params)
+        doc = await self.elastic.get_batch(index=self._index, body=params)
         if not doc:
             return None
 
