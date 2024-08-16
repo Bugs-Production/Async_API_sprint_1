@@ -15,12 +15,12 @@ from .utils import get_offset_params
 
 class AbstractGenreService(ABC):
     @abstractmethod
-    async def get_by_id(self, genre_id: Any) -> GenreDetail | None: ...
+    async def get_by_id(self, genre_id: Any) -> GenreDetail | None:
+        pass
 
     @abstractmethod
-    async def get_all(
-        self, page_num: int, page_size: int
-    ) -> list[GenreDetail] | None: ...
+    async def get_all(self, page_num: int, page_size: int) -> list[GenreDetail] | None:
+        pass
 
 
 class GenreService(AbstractGenreService):

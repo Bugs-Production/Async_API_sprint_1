@@ -16,7 +16,8 @@ from .utils import (get_genre_filter_params, get_offset_params,
 
 class AbstractFilmService(ABC):
     @abstractmethod
-    async def get_by_id(self, film_id: Any) -> Film | None: ...
+    async def get_by_id(self, film_id: Any) -> Film | None:
+        pass
 
     @abstractmethod
     async def get_all(
@@ -25,7 +26,8 @@ class AbstractFilmService(ABC):
         genre_filter: str | None,
         page_num: int,
         page_size: int,
-    ) -> list[Film] | None: ...
+    ) -> list[Film] | None:
+        pass
 
     async def search(
         self,
@@ -33,7 +35,8 @@ class AbstractFilmService(ABC):
         query: str,
         page_num: int,
         page_size: int,
-    ) -> list[Film] | None: ...
+    ) -> list[Film] | None:
+        pass
 
 
 class FilmService(AbstractFilmService):

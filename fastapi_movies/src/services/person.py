@@ -15,12 +15,14 @@ from .utils import get_offset_params, get_search_params
 
 class AbstractPersonService(ABC):
     @abstractmethod
-    async def get_by_id(self, person_id: Any) -> PersonDetail | None: ...
+    async def get_by_id(self, person_id: Any) -> PersonDetail | None:
+        pass
 
     @abstractmethod
     async def search(
         self, query: str, page_num: int, page_size: int
-    ) -> list[PersonDetail]: ...
+    ) -> list[PersonDetail]:
+        pass
 
 
 class PersonService(AbstractPersonService):
