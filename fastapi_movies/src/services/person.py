@@ -4,7 +4,7 @@ from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from db.elastic import get_elastic
+from db.elastic import ElasticStorage, get_elastic
 from db.redis import PersonsRedisCache, get_redis
 from models.models import PersonDetail
 
@@ -14,7 +14,7 @@ from .utils import get_offset_params, get_search_params
 class PersonService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = PersonsRedisCache(redis)
-        self.elastic = elastic
+        self.elastic = ElasticStorage(elastic)
         self._index = "persons"
 
     async def get_by_id(self, person_id: str) -> PersonDetail | None:
@@ -22,10 +22,14 @@ class PersonService:
         if person:
             return person
 
-        person = await self._get_person_from_elastic(person_id)
-        if not person:
+        doc = await self.elastic.get(index=self._index, id=person_id)
+        if not doc:
             return None
+
+        person = PersonDetail(**(doc["_source"]))
+
         await self.redis.put_person(person)
+
         return person
 
     async def search_persons(
@@ -38,37 +42,20 @@ class PersonService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**search_params, **offset_params}
 
-        persons_list = await self.redis.get_persons(
-            query,
-            page_num,
-            page_size,
-        )
-        if persons_list:
-            return persons_list
+        persons = await self.redis.get_persons(query, page_num, page_size)
+        if persons:
+            return persons
 
-        try:
-            persons = await self.elastic.search(index=self._index, body=params)
-        except NotFoundError:
+        doc = await self.elastic.search(index=self._index, body=params)
+        if not doc:
             return None
 
-        hits_persons = persons["hits"]["hits"]
-        persons_list = [PersonDetail(**person["_source"]) for person in hits_persons]
+        hits_persons = doc["hits"]["hits"]
+        persons = [PersonDetail(**person["_source"]) for person in hits_persons]
 
-        await self.redis.put_persons(
-            persons_list,
-            query,
-            page_num,
-            page_size,
-        )
+        await self.redis.put_persons(persons, query, page_num, page_size)
 
-        return persons_list
-
-    async def _get_person_from_elastic(self, person_id: str) -> PersonDetail | None:
-        try:
-            doc = await self.elastic.get(index=self._index, id=person_id)
-        except NotFoundError:
-            return None
-        return PersonDetail(**(doc["_source"]))
+        return persons
 
 
 @lru_cache()

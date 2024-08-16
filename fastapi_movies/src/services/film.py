@@ -4,7 +4,7 @@ from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from db.elastic import get_elastic
+from db.elastic import ElasticStorage, get_elastic
 from db.redis import FilmRedisCache, get_redis
 from models.models import Film
 
@@ -15,19 +15,21 @@ from .utils import (get_genre_filter_params, get_offset_params,
 class FilmService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = FilmRedisCache(redis)
-        self.elastic = elastic
+        self.elastic = ElasticStorage(elastic)
         self._index = "movies"
 
-    async def get_by_id(self, film_id: str) -> Film | None:
-        film = await self.redis.get_film(film_id=film_id)
+    async def get_by_id(self, id: str) -> Film | None:
+        film = await self.redis.get_film(film_id=id)
         if film:
             return film
 
-        film = await self._get_film_from_elastic(film_id)
-        if not film:
+        doc = await self.elastic.get(index=self._index, id=id)
+        if not doc:
             return None
 
+        film = Film(**doc["_source"])
         await self.redis.put_film(film=film)
+
         return film
 
     async def get_all_films(
@@ -42,33 +44,21 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **genre_params, **offset_params}
 
-        list_films = await self.redis.get_films(
-            page_num,
-            page_size,
-            sorting,
-            genre_filter,
-        )
-        if list_films:
-            return list_films
+        films = await self.redis.get_films(page_num, page_size, sorting, genre_filter)
+        if films:
+            return films
 
-        try:
-            films = await self.elastic.search(index=self._index, body=params)
-        except NotFoundError:
+        doc = await self.elastic.search(index=self._index, body=params)
+        if not doc:
             return None
 
-        hits_films = films["hits"]["hits"]
+        hits_films = doc["hits"]["hits"]
 
-        list_films = [Film(**film["_source"]) for film in hits_films]
+        films = [Film(**film["_source"]) for film in hits_films]
 
-        await self.redis.put_films(
-            list_films,
-            page_num,
-            page_size,
-            genre_filter,
-            sorting,
-        )
+        await self.redis.put_films(films, page_num, page_size, genre_filter, sorting)
 
-        return list_films
+        return films
 
     async def search_films(
         self,
@@ -82,40 +72,21 @@ class FilmService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**sort_params, **search_params, **offset_params}
 
-        list_films = await self.redis.get_films(
-            page_num,
-            page_size,
-            sorting,
-            query,
-        )
-        if list_films:
-            return list_films
+        films = await self.redis.get_films(page_num, page_size, sorting, query)
+        if films:
+            return films
 
-        try:
-            films = await self.elastic.search(index=self._index, body=params)
-        except NotFoundError:
+        doc = await self.elastic.search(index=self._index, body=params)
+        if not doc:
             return None
 
-        hits_films = films["hits"]["hits"]
+        hits_films = doc["hits"]["hits"]
 
-        list_films = [Film(**film["_source"]) for film in hits_films]
+        films = [Film(**film["_source"]) for film in hits_films]
 
-        await self.redis.put_films(
-            list_films,
-            page_num,
-            page_size,
-            query,
-            sorting,
-        )
+        await self.redis.put_films(films, page_num, page_size, query, sorting)
 
-        return list_films
-
-    async def _get_film_from_elastic(self, film_id: str) -> Film | None:
-        try:
-            doc = await self.elastic.get(index=self._index, id=film_id)
-        except NotFoundError:
-            return None
-        return Film(**doc["_source"])
+        return films
 
 
 @lru_cache()
