@@ -69,7 +69,7 @@ class TestGenresApi:
         )
 
         body, status = await aiohttp_request(
-            method="get", endpoint=self.endpoint, params=genres_pagination_data
+            method="GET", endpoint=self.endpoint, params=genres_pagination_data
         )
         assert status == expected_answer["status"]
         assert len(body) == expected_answer["length"]
