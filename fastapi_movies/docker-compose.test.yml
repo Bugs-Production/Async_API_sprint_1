@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+  fastapi:
+    container_name: movies_fastapi_test
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - es
+    volumes:
+      - src:/fastapi_movies/src
+    ports:
+      - "8080:80"
+    networks:
+      - "movies_test_network"
+
+  redis:
+    image: redis:latest
+    container_name: movies_redis_test
+    restart: always
+    volumes:
+      - redis_data_test:/data
+    env_file:
+      - .env
+    networks:
+      - "movies_test_network"
+
+  es:
+    image: elasticsearch:8.6.2
+    container_name: movies_es_test
+    environment:
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9200/" ]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - "movies_test_network"
+
+  tests:
+    image: python:3.11
+    container_name: movies_tests
+    env_file:
+      - .env
+    volumes:
+      - .:/fastapi_movies
+    working_dir: /fastapi_movies/src
+    environment:
+      - PYTHONPATH=/fastapi_movies/src
+    entrypoint: >
+      sh -c "pip install --upgrade pip
+      && pip install -r /fastapi_movies/src/tests/functional/requirements.txt
+      && python3 tests/functional/utils/wait_for_es.py
+      && python3 tests/functional/utils/wait_for_redis.py
+      && tail -f /dev/null"
+    networks:
+      - "movies_test_network"
+
+volumes:
+  redis_data_test:
+  src:
+
+networks:
+  movies_test_network:

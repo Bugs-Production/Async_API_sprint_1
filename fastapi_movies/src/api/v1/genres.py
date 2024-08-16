@@ -13,10 +13,9 @@ router = APIRouter()
 @router.get(
     "/",
     response_model=list[GenreDetail],
-    summary="Все жанры",
-    description="Возвращает список всех жанров с поддержкой пагинации. "
-    "Пользователь может указать размер страницы для "
-    "получения результатов.",
+    summary="Список жанров",
+    description="Cписок жанров с пагинацией. Размер страницы задается пользователем.",
+    response_description="Название, описание жанра",
 )
 async def genres(
     paginator: Paginator = Depends(Paginator),
@@ -35,9 +34,12 @@ async def genres(
 @router.get(
     "/{genre_id}",
     response_model=GenreDetail,
-    summary="Поиск жанра по UUID",
-    description="Возвращает подробную информацию о жанре по его уникальному идентификатору (UUID)."
-    " Если жанр не найден, возвращается ошибка 404.",
+    summary="Детали жанра",
+    description=(
+        "Возвращает подробную информацию о жанре по его UUID. "
+        "Если жанр не найден, возвращается ошибка 404."
+    ),
+    response_description="Название, описание жанра",
 )
 async def genre_details(
     genre_id: str, genre_service: GenreService = Depends(get_genre_service)
