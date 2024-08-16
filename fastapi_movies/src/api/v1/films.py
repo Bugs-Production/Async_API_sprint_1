@@ -27,7 +27,7 @@ async def film_search(
     film_service: FilmService = Depends(get_film_service),
 ) -> list[Film]:
 
-    searched_films = await film_service.search_films(
+    searched_films = await film_service.search(
         query=query,
         sorting=sort,
         page_num=paginator.page_number,
@@ -60,7 +60,7 @@ async def films(
     Для сортировки используется default="-imdb_rating" по бизнес логике,
     чтобы всегда выводились только популярные фильмы
     """
-    all_films = await film_service.get_all_films(
+    all_films = await film_service.get_all(
         sorting=sort,
         genre_filter=genre,
         page_num=paginator.page_number,

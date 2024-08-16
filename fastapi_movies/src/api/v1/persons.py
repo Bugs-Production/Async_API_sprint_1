@@ -23,7 +23,7 @@ async def person_search(
     person_service: PersonService = Depends(get_person_service),
 ) -> list[PersonDetail]:
 
-    searched_persons = await person_service.search_persons(
+    searched_persons = await person_service.search(
         query=query,
         page_num=paginator.page_number,
         page_size=paginator.page_size,
