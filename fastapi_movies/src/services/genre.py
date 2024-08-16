@@ -4,7 +4,7 @@ from elasticsearch import AsyncElasticsearch, NotFoundError
 from fastapi import Depends
 from redis.asyncio import Redis
 
-from db.elastic import get_elastic
+from db.elastic import ElasticStorage, get_elastic
 from db.redis import GenresRedisCache, get_redis
 from models.models import GenreDetail
 
@@ -14,7 +14,7 @@ from .utils import get_offset_params
 class GenreService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = GenresRedisCache(redis)
-        self.elastic = elastic
+        self.elastic = ElasticStorage(elastic)
         self._index = "genres"
 
     async def get_all_genres(
@@ -24,45 +24,35 @@ class GenreService:
         offset_params = get_offset_params(page_num, page_size)
         params = {**query, **offset_params}
 
-        # пытаемся найти список жанров по номеру и размеру страницы
-        genres_list = await self.redis.get_genres(page_num, page_size)
-        if genres_list:
-            return genres_list
+        genres = await self.redis.get_genres(page_num, page_size)
+        if genres:
+            return genres
 
-        try:
-            genres = await self.elastic.search(index=self._index, body=params)
-        except NotFoundError:
+        doc = await self.elastic.search(index=self._index, body=params)
+        if not doc:
             return None
 
-        hits_genres = genres["hits"]["hits"]
-        genres_list = [GenreDetail(**genre["_source"]) for genre in hits_genres]
+        hits_genres = doc["hits"]["hits"]
+        genres = [GenreDetail(**genre["_source"]) for genre in hits_genres]
 
-        await self.redis.put_genres(
-            genres_list,
-            page_num,
-            page_size,
-        )
+        await self.redis.put_genres(genres, page_num, page_size)
 
-        return genres_list
+        return genres
 
     async def get_by_id(self, genre_id: str) -> GenreDetail | None:
         genre = await self.redis.get_genre(genre_id=genre_id)
         if genre:
             return genre
 
-        genre = await self._get_genre_from_elastic(genre_id)
-        if not genre:
+        doc = await self.elastic.get(index=self._index, id=genre_id)
+        if not doc:
             return None
+
+        genre = GenreDetail(**doc["_source"])
 
         await self.redis.put_genre(genre=genre)
-        return genre
 
-    async def _get_genre_from_elastic(self, genre_id: str) -> GenreDetail | None:
-        try:
-            doc = await self.elastic.get(index=self._index, id=genre_id)
-        except NotFoundError:
-            return None
-        return GenreDetail(**doc["_source"])
+        return genre
 
 
 @lru_cache()

@@ -18,3 +18,15 @@ class AbstractCache(ABC):
 
     def create_cache_key(self, *args) -> str:
         return "_".join(str(arg) for arg in args if arg)
+
+
+class AbstractStorage(ABC):
+    """Абстрактный класс для хранения данных сервиса"""
+
+    @abstractmethod
+    async def get(self, index: str, id: str) -> dict | None:
+        pass
+
+    @abstractmethod
+    async def search(self, index: str, body: dict, **kwargs) -> dict | None:
+        pass
