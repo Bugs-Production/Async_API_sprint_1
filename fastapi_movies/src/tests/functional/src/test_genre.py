@@ -2,7 +2,8 @@ from http import HTTPStatus
 
 import pytest
 
-from tests.functional.conftest import aiohttp_request, es_write_data
+from tests.functional.fixtures.fixtures_async import aiohttp_request
+from tests.functional.fixtures.fixtures_es import es_write_data
 from tests.functional.settings import test_settings
 from tests.functional.test_data.es_data import genres_data
 
