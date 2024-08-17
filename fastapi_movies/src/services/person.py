@@ -1,6 +1,8 @@
+from abc import ABC, abstractmethod
 from functools import lru_cache
+from typing import Any
 
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from redis.asyncio import Redis
 
@@ -11,7 +13,17 @@ from models.models import PersonDetail
 from .utils import get_offset_params, get_search_params
 
 
-class PersonService:
+class AbstractPersonService(ABC):
+    @abstractmethod
+    async def get_by_id(self, person_id: Any) -> PersonDetail | None:
+        pass
+
+    @abstractmethod
+    async def search(self, *args, **kwargs) -> list[PersonDetail]:
+        pass
+
+
+class PersonService(AbstractPersonService):
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = PersonsRedisCache(redis)
         self.elastic = ElasticStorage(elastic)
@@ -32,7 +44,7 @@ class PersonService:
 
         return person
 
-    async def search_persons(
+    async def search(
         self,
         query: str,
         page_num: int,
@@ -46,7 +58,7 @@ class PersonService:
         if persons:
             return persons
 
-        doc = await self.elastic.search(index=self._index, body=params)
+        doc = await self.elastic.get_batch(index=self._index, body=params)
         if not doc:
             return None
 

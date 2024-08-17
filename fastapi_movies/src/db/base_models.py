@@ -24,9 +24,9 @@ class AbstractStorage(ABC):
     """Абстрактный класс для хранения данных сервиса"""
 
     @abstractmethod
-    async def get(self, index: str, id: str) -> dict | None:
+    async def get(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    async def search(self, index: str, body: dict, **kwargs) -> dict | None:
+    async def get_batch(self, *args, **kwargs):
         pass

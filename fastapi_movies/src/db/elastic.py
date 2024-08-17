@@ -21,7 +21,7 @@ class ElasticStorage(AbstractStorage):
             return None
         return doc
 
-    async def search(self, index: str, body: dict, **kwargs) -> dict | None:
+    async def get_batch(self, index: str, body: dict, **kwargs) -> dict | None:
         try:
             doc = await self.elastic.search(index=index, body=body, **kwargs)
         except NotFoundError:
