@@ -19,9 +19,7 @@ class AbstractPersonService(ABC):
         pass
 
     @abstractmethod
-    async def search(
-        self, query: str, page_num: int, page_size: int
-    ) -> list[PersonDetail]:
+    async def search(self, *args, **kwargs) -> list[PersonDetail]:
         pass
 
 

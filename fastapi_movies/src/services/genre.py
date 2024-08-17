@@ -19,7 +19,7 @@ class AbstractGenreService(ABC):
         pass
 
     @abstractmethod
-    async def get_all(self, page_num: int, page_size: int) -> list[GenreDetail] | None:
+    async def get_all(self, *args, **kwargs) -> list[GenreDetail] | None:
         pass
 
 

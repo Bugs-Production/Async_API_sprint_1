@@ -20,22 +20,11 @@ class AbstractFilmService(ABC):
         pass
 
     @abstractmethod
-    async def get_all(
-        self,
-        sorting: str,
-        genre_filter: str | None,
-        page_num: int,
-        page_size: int,
-    ) -> list[Film] | None:
+    async def get_all(self, *args, **kwargs) -> list[Film] | None:
         pass
 
-    async def search(
-        self,
-        sorting: str,
-        query: str,
-        page_num: int,
-        page_size: int,
-    ) -> list[Film] | None:
+    @abstractmethod
+    async def search(self, *args, **kwargs) -> list[Film] | None:
         pass
 
 
