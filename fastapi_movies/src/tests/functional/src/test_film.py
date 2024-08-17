@@ -1,4 +1,4 @@
-import uuid
+from http import HTTPStatus
 
 import pytest
 
@@ -13,28 +13,28 @@ test_data = [
         "page_size": 50,
         "page_num": 1,
         "result": 50,
-        "status_code": 200
+        "status_code": HTTPStatus.OK
     },
     # 2 кейс, получение нужного размера страницы
     {
         "page_size": 20,
         "page_num": 1,
         "result": 20,
-        "status_code": 200
+        "status_code": HTTPStatus.OK
     },
     # 3 кейс, успешное получение оставшихся фильмов по второй странице
     {
         "page_size": 50,
         "page_num": 2,
         "result": 10,
-        "status_code": 200,
+        "status_code": HTTPStatus.OK,
     },
     # 4 кейс, в случае когда переходим на номер страницы без фильмов, ожидаем 404
     {
         "page_size": 50,
         "page_num": 3,
         "result": 1,
-        "status_code": 404,
+        "status_code": HTTPStatus.NOT_FOUND,
     },
     # 5 кейс, успешное получение фильмов по id жанра
     {
@@ -42,7 +42,7 @@ test_data = [
         "page_num": 1,
         "genre": "fbd77e08-4dd6-4daf-9276-2abaa709fe87",
         "result": 50,
-        "status_code": 200,
+        "status_code": HTTPStatus.OK,
     },
     # 6 кейс, не нашли фильмы с нужным жанром, ожидаем 404
     {
@@ -50,7 +50,7 @@ test_data = [
         "page_num": 1,
         "genre": "6659b767-b656-49cf-80b2-6a7c012e9d22",
         "result": 1,
-        "status_code": 404,
+        "status_code": HTTPStatus.NOT_FOUND,
     },
 ]
 # fmt: on
@@ -99,7 +99,7 @@ class TestFilmsApi:
             endpoint=f"{self.endpoint}/{self.first_film_id}",
         )
 
-        assert status == 200
+        assert status == HTTPStatus.OK
         assert len(body) == 8
 
     @pytest.mark.asyncio
@@ -115,5 +115,5 @@ class TestFilmsApi:
             endpoint=f"{self.endpoint}/asd",
         )
 
-        assert status == 404
+        assert status == HTTPStatus.NOT_FOUND
         assert len(body) == 1

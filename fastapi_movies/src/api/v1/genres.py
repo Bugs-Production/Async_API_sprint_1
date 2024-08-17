@@ -21,7 +21,7 @@ async def genres(
     paginator: Paginator = Depends(Paginator),
     genre_service: GenreService = Depends(get_genre_service),
 ) -> list[GenreDetail]:
-    all_genres = await genre_service.get_all_genres(
+    all_genres = await genre_service.get_all(
         page_num=paginator.page_number,
         page_size=paginator.page_size,
     )

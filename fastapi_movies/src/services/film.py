@@ -1,6 +1,8 @@
+from abc import ABC, abstractmethod
 from functools import lru_cache
+from typing import Any
 
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from redis.asyncio import Redis
 
@@ -12,18 +14,32 @@ from .utils import (get_genre_filter_params, get_offset_params,
                     get_search_params, get_sort_params)
 
 
-class FilmService:
+class AbstractFilmService(ABC):
+    @abstractmethod
+    async def get_by_id(self, film_id: Any) -> Film | None:
+        pass
+
+    @abstractmethod
+    async def get_all(self, *args, **kwargs) -> list[Film] | None:
+        pass
+
+    @abstractmethod
+    async def search(self, *args, **kwargs) -> list[Film] | None:
+        pass
+
+
+class FilmService(AbstractFilmService):
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         self.redis = FilmRedisCache(redis)
         self.elastic = ElasticStorage(elastic)
         self._index = "movies"
 
-    async def get_by_id(self, id: str) -> Film | None:
-        film = await self.redis.get_film(film_id=id)
+    async def get_by_id(self, film_id: str) -> Film | None:
+        film = await self.redis.get_film(film_id=film_id)
         if film:
             return film
 
-        doc = await self.elastic.get(index=self._index, id=id)
+        doc = await self.elastic.get(index=self._index, id=film_id)
         if not doc:
             return None
 
@@ -32,7 +48,7 @@ class FilmService:
 
         return film
 
-    async def get_all_films(
+    async def get_all(
         self,
         sorting: str,
         genre_filter: str | None,
@@ -48,7 +64,7 @@ class FilmService:
         if films:
             return films
 
-        doc = await self.elastic.search(index=self._index, body=params)
+        doc = await self.elastic.get_batch(index=self._index, body=params)
         if not doc:
             return None
 
@@ -60,7 +76,7 @@ class FilmService:
 
         return films
 
-    async def search_films(
+    async def search(
         self,
         sorting: str,
         query: str,
@@ -76,7 +92,7 @@ class FilmService:
         if films:
             return films
 
-        doc = await self.elastic.search(index=self._index, body=params)
+        doc = await self.elastic.get_batch(index=self._index, body=params)
         if not doc:
             return None
 
